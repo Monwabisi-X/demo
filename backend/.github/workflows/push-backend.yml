@@ -1,0 +1,38 @@
+name: Push to backend branch
+
+# Mirrors every commit on main to the `backend` branch of the system repo.
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+        working-directory: backend
+      - run: npm run check
+        working-directory: backend
+      - run: npm test
+        working-directory: backend
+
+  push-to-backend:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Force-push HEAD to backend branch
+        run: git push --force origin HEAD:backend

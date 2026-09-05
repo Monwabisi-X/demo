@@ -1,0 +1,45 @@
+{
+  "name": "royal-square-backend",
+  "version": "2.0.0",
+  "description": "Royal Square Financial backend — multi-tenant financial services API (Express, Sequelize, Redis, AWS).",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "migrate": "node src/migrations/run.js",
+    "migrate:prod": "NODE_ENV=production node src/migrations/run.js",
+    "worker": "node src/workers/index.js",
+    "lint": "eslint src",
+    "test": "node --test test/*.test.js",
+    "check": "node scripts/check-load.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-kms": "^3.600.0",
+    "@aws-sdk/client-s3": "^3.600.0",
+    "@aws-sdk/client-secrets-manager": "^3.600.0",
+    "@aws-sdk/s3-request-presigner": "^3.600.0",
+    "bcryptjs": "^2.4.3",
+    "bull": "^4.16.0",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "helmet": "^7.1.0",
+    "ioredis": "^5.4.1",
+    "joi": "^17.13.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.12.0",
+    "pg-hstore": "^2.3.4",
+    "prom-client": "^15.1.0",
+    "sequelize": "^6.37.3",
+    "uuid": "^9.0.1",
+    "winston": "^3.13.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "nodemon": "^3.1.0"
+  }
+}

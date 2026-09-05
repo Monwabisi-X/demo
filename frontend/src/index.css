@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-cream text-ink font-sans antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-serif tracking-tight;
+  }
+
+  /* Thin, restrained focus ring in maroon. */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-maroon/40 ring-offset-2 ring-offset-cream;
+  }
+}
+
+@layer components {
+  /* Hairline divider used across panels. */
+  .rule {
+    @apply border-cream-300;
+  }
+
+  /* Uppercase label / eyebrow text used in the presentation style. */
+  .eyebrow {
+    @apply text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-maroon;
+  }
+
+  .card {
+    @apply rounded-xl border border-cream-300 bg-cream-50 shadow-card;
+  }
+}
