@@ -100,4 +100,4 @@ async function remove({ tenantId, clientId }) {
   return { id: clientId, deleted: true };
 }
 
-module.exports = { list, getById, create, update, remove, toSafeJSON };
+module.exports = { list, getById, create, update, remove, toSafeJSON, encryptIdentifiers };

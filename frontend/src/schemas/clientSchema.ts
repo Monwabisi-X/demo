@@ -21,19 +21,27 @@ function isValidSaId(id: string): boolean {
   return sum % 10 === 0;
 }
 
-export const clientSchema = z.object({
-  title: z.string().max(30).optional().or(z.literal('')),
-  firstName: z.string().min(1, 'First name is required').max(100),
-  surname: z.string().min(1, 'Surname is required').max(100),
-  idNumber: z
-    .string()
-    .refine((v) => !v || isValidSaId(v), 'Enter a valid 13-digit SA ID number'),
-  email: z.string().email('Enter a valid email address'),
-  mobile: z
-    .string()
-    .regex(/^(\+?\d{9,15})$/, 'Enter a valid mobile number')
-    .optional()
-    .or(z.literal('')),
-});
+export const clientSchema = z
+  .object({
+    title: z.string().max(30).optional().or(z.literal('')),
+    firstName: z.string().min(1, 'First name is required').max(100),
+    surname: z.string().min(1, 'Surname is required').max(100),
+    idNumber: z
+      .string()
+      .refine((v) => !v || isValidSaId(v), 'Enter a valid 13-digit SA ID number'),
+    email: z.string().email('Enter a valid email address'),
+    mobile: z
+      .string()
+      .regex(/^(\+?\d{9,15})$/, 'Enter a valid mobile number')
+      .optional()
+      .or(z.literal('')),
+    // Sets the login password for the new client account created during onboarding.
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    confirmPassword: z.string().min(8, 'Please confirm your password'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
 
 export type ClientFormData = z.infer<typeof clientSchema>;

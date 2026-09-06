@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { authApi } from '@/api/auth.api';
 import { medicalApi } from '@/api/medical.api';
 import { documentsApi } from '@/api/documents.api';
 import { toApiError } from '@/api/client';
+import { DEMO_TENANT_ID } from '@/schemas/authSchema';
 import type { ClientFormData } from '@/schemas/clientSchema';
 import type { MedicalFormData } from '@/schemas/medicalSchema';
 import { Stepper } from '@/components/onboarding/Stepper';
@@ -14,7 +16,7 @@ import { Button, Card, Logo } from '@/components/ui';
 const STEPS = ['Your details', 'Medical intake', 'Consent', 'Done'];
 
 export default function OnboardingPage() {
-  const { user } = useAuth();
+  const { user, clientLogin, refreshUser } = useAuth();
   const [step, setStep] = useState(0);
   const [personal, setPersonal] = useState<ClientFormData | null>(null);
   const [consentGiven, setConsentGiven] = useState(false);
@@ -23,9 +25,41 @@ export default function OnboardingPage() {
 
   const clientId = user?.client_id || undefined;
 
-  function handlePersonal(data: ClientFormData) {
-    setPersonal(data);
-    setStep(1);
+  /**
+   * Step 1: create the login account AND the linked client record in one call
+   * (POST /auth/register with clientProfile — created + linked atomically on the backend),
+   * then sign in immediately so the subsequent medical/consent steps are authenticated.
+   * Previously onboarding never created an account at all — there was no password field and
+   * no registration call.
+   */
+  async function handlePersonal(data: ClientFormData) {
+    setError(null);
+    setSubmitting(true);
+    try {
+      await authApi.register({
+        tenantId: DEMO_TENANT_ID,
+        email: data.email,
+        displayName: `${data.firstName} ${data.surname}`.trim(),
+        password: data.password,
+        clientProfile: {
+          clientType: 'individual',
+          title: data.title || undefined,
+          firstName: data.firstName,
+          surname: data.surname,
+          idNumber: data.idNumber || undefined,
+          email: data.email,
+          mobile: data.mobile || undefined,
+        },
+      });
+      await clientLogin({ email: data.email, password: data.password });
+      await refreshUser();
+      setPersonal(data);
+      setStep(1);
+    } catch (err) {
+      setError(toApiError(err).message);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function handleMedical(answers: MedicalFormData) {
@@ -79,7 +113,7 @@ export default function OnboardingPage() {
       <header className="border-b border-cream-300 bg-cream/80 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-6">
           <Link to="/"><Logo /></Link>
-          <Link to="/login" className="text-sm text-ink-faint hover:text-maroon">Already a client? Sign in</Link>
+          <Link to="/client-login" className="text-sm text-ink-faint hover:text-maroon">Already a client? Sign in</Link>
         </div>
       </header>
 

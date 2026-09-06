@@ -15,6 +15,16 @@ export const authApi = {
     displayName: string;
     password: string;
     roleCodes?: string[];
+    // Prospective client intake — creates + links a Client record to the new user.
+    clientProfile?: {
+      clientType?: 'individual' | 'legal_entity';
+      title?: string;
+      firstName?: string;
+      surname?: string;
+      idNumber?: string;
+      email?: string;
+      mobile?: string;
+    };
   }) {
     return api.post<AppUser>('/auth/register', input);
   },

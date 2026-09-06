@@ -231,3 +231,45 @@ test('Adapters: send() fails cleanly when not configured (no secret)', async () 
   assert.equal(res.status, 'failed');
   assert.match(res.error, /not configured/i);
 });
+
+
+// ── errorHandler: clear diagnostics for common local-setup mistakes ──────────────
+const { errorHandler } = require('../src/middleware/errorHandler');
+
+function fakeRes() {
+  const res = { statusCode: null, body: null };
+  res.status = (code) => { res.statusCode = code; return res; };
+  res.json = (body) => { res.body = body; return res; };
+  return res;
+}
+
+test('errorHandler: missing table (Postgres 42P01) maps to a clear SCHEMA_NOT_READY 503', () => {
+  const err = new Error('relation "app.users" does not exist');
+  err.name = 'SequelizeDatabaseError';
+  err.original = { code: '42P01' };
+  const req = { context: { requestId: 'test-req-1' } };
+  const res = fakeRes();
+  errorHandler(err, req, res, () => {});
+  assert.equal(res.statusCode, 503);
+  assert.equal(res.body.error.code, 'SCHEMA_NOT_READY');
+  assert.match(res.body.error.message, /npm run migrate/);
+});
+
+test('errorHandler: DB connection refused maps to a clear DATABASE_UNAVAILABLE 503', () => {
+  const err = new Error('connect ECONNREFUSED');
+  err.name = 'SequelizeConnectionRefusedError';
+  const req = { context: { requestId: 'test-req-2' } };
+  const res = fakeRes();
+  errorHandler(err, req, res, () => {});
+  assert.equal(res.statusCode, 503);
+  assert.equal(res.body.error.code, 'DATABASE_UNAVAILABLE');
+});
+
+test('errorHandler: unrecognised errors still fall back to a generic 500 (no leak in prod)', () => {
+  const err = new Error('something truly unexpected');
+  const req = { context: { requestId: 'test-req-3' } };
+  const res = fakeRes();
+  errorHandler(err, req, res, () => {});
+  assert.equal(res.statusCode, 500);
+  assert.equal(res.body.error.code, 'INTERNAL_ERROR');
+});

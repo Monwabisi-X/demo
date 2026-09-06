@@ -8,6 +8,7 @@
 const bcrypt = require('bcryptjs');
 const jwtService = require('./jwt.service');
 const { AppError } = require('../../utils/errors');
+const { sequelize } = require('../../config/database');
 
 const BCRYPT_ROUNDS = 12;
 
@@ -43,8 +44,24 @@ async function roleCodesForUser(user) {
 // only ever for prospective clients; privileged roles must be granted by an admin (createUser).
 const SELF_REGISTER_ROLES = ['CLIENT'];
 
-async function register({ tenantId, email, displayName, password, roleCodes = ['CLIENT'], selfService = true }) {
-  const { User, Role, Tenant } = models();
+/**
+ * @param {object} input
+ * @param {object} [input.clientProfile] - When registering a prospective CLIENT (self-service
+ *   onboarding), pass their intake details here. A Client record is created in the SAME
+ *   transaction as the User and immediately linked via user.client_id, so the newly
+ *   registered account is usable right away (own policies/claims/documents visible) without
+ *   a separate privileged "create client" call the CLIENT role isn't permitted to make.
+ */
+async function register({
+  tenantId,
+  email,
+  displayName,
+  password,
+  roleCodes = ['CLIENT'],
+  selfService = true,
+  clientProfile = null,
+}) {
+  const { User, Role, Tenant, Client } = models();
 
   // Tenant guard: the target tenant must exist and be active. Without this, /auth/register
   // trusts an arbitrary tenantId from the request body.
@@ -64,15 +81,43 @@ async function register({ tenantId, email, displayName, password, roleCodes = ['
   const existing = await User.findOne({ where: { tenant_id: tenantId, email } });
   if (existing) throw new AppError('DUPLICATE_RESOURCE', 'A user with that email already exists', 409);
 
-  const user = await User.create({
-    tenant_id: tenantId,
-    email,
-    display_name: displayName,
-    password_hash: await hashPassword(password),
-  });
+  const user = await sequelize.transaction(async (t) => {
+    const created = await User.create(
+      {
+        tenant_id: tenantId,
+        email,
+        display_name: displayName,
+        password_hash: await hashPassword(password),
+      },
+      { transaction: t }
+    );
 
-  const roles = await Role.findAll({ where: { code: finalRoles } });
-  if (roles.length) await user.setRoles(roles);
+    const roles = await Role.findAll({ where: { code: finalRoles }, transaction: t });
+    if (roles.length) await created.setRoles(roles, { transaction: t });
+
+    if (clientProfile) {
+      // Reuse the client service's identifier encryption so ID/passport/tax/email/mobile
+      // are handled consistently (never stored in plaintext) whether created here or via
+      // the adviser-facing /clients endpoint.
+      const clientService = require('../client/client.service');
+      const encrypted = await clientService.encryptIdentifiers(clientProfile);
+      const client = await Client.create(
+        {
+          tenant_id: tenantId,
+          client_type: clientProfile.clientType || 'individual',
+          title: clientProfile.title,
+          first_name: clientProfile.firstName,
+          surname: clientProfile.surname,
+          fica_status: 'pending',
+          ...encrypted,
+        },
+        { transaction: t }
+      );
+      await created.update({ client_id: client.id }, { transaction: t });
+    }
+
+    return created;
+  });
 
   return sanitize(user);
 }
