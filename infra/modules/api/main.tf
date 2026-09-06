@@ -28,12 +28,25 @@ resource "aws_lambda_function" "smile_id" {
   tags = { Name = "${var.name_prefix}-${var.environment}-smile-id" }
 }
 
-# Allow the Lambda to read ONLY the Smile ID secret.
+# Allow the Lambda to read ONLY the Smile ID secret and decrypt it only through
+# Secrets Manager in this region.
 data "aws_iam_policy_document" "lambda_secret_read" {
   count = var.enable_api_lambda ? 1 : 0
+
   statement {
     actions   = ["secretsmanager:GetSecretValue"]
     resources = [var.smile_id_secret_arn]
+  }
+
+  statement {
+    actions   = ["kms:Decrypt"]
+    resources = [var.kms_key_arn]
+
+    condition {
+      test     = "StringEquals"
+      variable = "kms:ViaService"
+      values   = ["secretsmanager.${var.region}.amazonaws.com"]
+    }
   }
 }
 

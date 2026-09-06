@@ -1,9 +1,5 @@
-# Automation for the "straight-through" features:
-#   - EventBridge Scheduler: ticks the reminder engine through a dedicated Lambda adapter.
-#   - Step Functions: orchestrates the multi-week motor-claim lifecycle.
-# Both are cheap/pay-per-use but toggled so a plan stays minimal.
+# Pay-per-use automation: a dedicated reminder schedule and claims state machine.
 
-# ── IAM role assumed by EventBridge Scheduler ─────────────────────────────────────
 data "aws_iam_policy_document" "scheduler_assume" {
   count = var.enable_scheduler ? 1 : 0
   statement {
@@ -21,19 +17,45 @@ resource "aws_iam_role" "scheduler" {
   assume_role_policy = data.aws_iam_policy_document.scheduler_assume[0].json
 }
 
-# Daily reminder tick. It is created only when a dedicated reminder Lambda target is
-# explicitly supplied. The execution role is credentials for Scheduler, never the target.
+resource "aws_sqs_queue" "reminder_dlq" {
+  count                             = var.enable_scheduler || var.retain_reminder_dlq ? 1 : 0
+  name                              = "${var.name_prefix}-${var.environment}-reminders-dlq"
+  message_retention_seconds         = 1209600
+  kms_master_key_id                 = var.kms_key_arn
+  kms_data_key_reuse_period_seconds = 300
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
 data "aws_iam_policy_document" "scheduler_invoke" {
-  count = var.enable_scheduler && var.reminder_target_arn != "" ? 1 : 0
+  count = var.enable_scheduler ? 1 : 0
 
   statement {
+    sid       = "InvokeDedicatedReminderLambda"
     actions   = ["lambda:InvokeFunction"]
     resources = [var.reminder_target_arn]
+  }
+
+  statement {
+    sid       = "SendFailedInvocationsToDlq"
+    actions   = ["sqs:SendMessage"]
+    resources = [aws_sqs_queue.reminder_dlq[0].arn]
+  }
+
+  statement {
+    sid = "UseEncryptedDlqKey"
+    actions = [
+      "kms:Decrypt",
+      "kms:GenerateDataKey"
+    ]
+    resources = [var.kms_key_arn]
   }
 }
 
 resource "aws_iam_role_policy" "scheduler_invoke" {
-  count  = var.enable_scheduler && var.reminder_target_arn != "" ? 1 : 0
+  count  = var.enable_scheduler ? 1 : 0
   name   = "${var.name_prefix}-${var.environment}-invoke-reminder"
   role   = aws_iam_role.scheduler[0].id
   policy = data.aws_iam_policy_document.scheduler_invoke[0].json
@@ -42,23 +64,28 @@ resource "aws_iam_role_policy" "scheduler_invoke" {
 resource "aws_scheduler_schedule" "reminders" {
   count                        = var.enable_scheduler ? 1 : 0
   name                         = "${var.name_prefix}-${var.environment}-reminders-tick"
-  schedule_expression          = "rate(1 day)"
+  schedule_expression          = "cron(0 8 * * ? *)"
   schedule_expression_timezone = "Africa/Johannesburg"
   state                        = "ENABLED"
 
-  flexible_time_window {
-    mode = "OFF"
-  }
+  flexible_time_window { mode = "OFF" }
 
   target {
     arn      = var.reminder_target_arn
     role_arn = aws_iam_role.scheduler[0].arn
+    input    = jsonencode({ source = "eventbridge-scheduler", action = "run-reminders" })
+
+    dead_letter_config { arn = aws_sqs_queue.reminder_dlq[0].arn }
+    retry_policy {
+      maximum_event_age_in_seconds = 3600
+      maximum_retry_attempts       = 2
+    }
   }
 
   lifecycle {
     precondition {
       condition     = var.reminder_target_arn != ""
-      error_message = "enable_scheduler=true requires reminder_target_arn to be a dedicated reminder Lambda function ARN."
+      error_message = "The scheduler requires the repository-managed reminder Lambda ARN."
     }
   }
 
@@ -87,8 +114,6 @@ resource "aws_sfn_state_machine" "claims" {
   count    = var.enable_step_functions ? 1 : 0
   name     = "${var.name_prefix}-${var.environment}-claims-lifecycle"
   role_arn = aws_iam_role.sfn[0].arn
-  # A minimal placeholder definition mirroring the app's MOTOR_LIFECYCLE steps. Replace the
-  # Pass states with Task states (Lambda/SDK integrations) when wiring real provider calls.
   definition = jsonencode({
     Comment = "Royal Square motor claim lifecycle"
     StartAt = "ClaimNumberIssued"

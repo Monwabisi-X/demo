@@ -14,8 +14,16 @@ const sm = new SecretsManagerClient({ region: REGION });
 
 async function getApiKey() {
   if (!SECRET_ARN) return null;
-  const res = await sm.send(new GetSecretValueCommand({ SecretId: SECRET_ARN }));
-  return res.SecretString || null;
+  try {
+    const res = await sm.send(new GetSecretValueCommand({ SecretId: SECRET_ARN }));
+    return res.SecretString || null;
+  } catch (err) {
+    // A newly created secret container intentionally has no AWSCURRENT version until an
+    // operator injects the value out-of-band. Treat that state as simulation mode, but do
+    // not hide access-denied, KMS, or networking failures.
+    if (err?.name === 'ResourceNotFoundException') return null;
+    throw err;
+  }
 }
 
 export const handler = async (event) => {

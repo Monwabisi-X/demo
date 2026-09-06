@@ -9,7 +9,7 @@
 
 locals {
   secret_names = [
-    "db-password",        # RDS master password
+    "db-password",        # legacy container retained during migration to RDS-managed credentials
     "jwt-secret",         # backend JWT signing secret (>=32 chars)
     "encryption-key",     # app-level field encryption key (envelope via KMS in prod)
     "smile-id-api-key",   # Smile ID partner API key for identity verification
