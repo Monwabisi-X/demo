@@ -32,7 +32,7 @@ export function AdminShell({
     <div className="min-h-screen bg-cream">
       <div className="mx-auto flex max-w-[1600px]">
         <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r border-cream-300 bg-ink p-5 text-cream-50 lg:flex">
-          <Link to="/" className="mb-8 [&_span]:text-cream-50">
+          <Link to="/" className="mb-8">
             <Logo />
           </Link>
           <p className="eyebrow mb-3 text-maroon-tint">Admin console</p>

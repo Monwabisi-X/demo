@@ -38,7 +38,7 @@ export default function LoginPage() {
     <div className="grid min-h-screen lg:grid-cols-2">
       {/* Left: brand panel (presentation gravitas) */}
       <div className="relative hidden flex-col justify-between bg-ink p-12 text-cream-50 lg:flex">
-        <Logo className="[&_span]:text-cream-50" />
+        <Logo />
         <div>
           <p className="eyebrow text-maroon-tint">Royal Square Financial</p>
           <h1 className="mt-3 max-w-md font-serif text-4xl leading-tight text-cream-50">
