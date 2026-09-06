@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Logo, Badge, statusTone, Button } from '@/components/ui';
 import { initials } from '@/lib/format';
 import { cn } from '@/lib/cn';
+import { LayoutDashboard, TrendingUp, ShieldCheck, FileText, FolderOpen, User } from 'lucide-react';
 
 export interface DashboardTab {
   id: string;
@@ -11,6 +12,15 @@ export interface DashboardTab {
 }
 
 /** Tab ids intentionally match Koisa's navigate_to_tab enum so the AI can route here. */
+const TAB_ICONS: Record<string, React.ElementType> = {
+  overview: LayoutDashboard,
+  financial_position: TrendingUp,
+  policies: ShieldCheck,
+  claims: FileText,
+  documents: FolderOpen,
+  profile: User,
+};
+
 export const DASHBOARD_TABS: DashboardTab[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'financial_position', label: 'Financial Position' },
@@ -44,17 +54,19 @@ export function DashboardShell({
           <nav className="flex flex-1 flex-col gap-1">
             {DASHBOARD_TABS.map((t) => {
               const isActive = t.id === active;
+              const Icon = TAB_ICONS[t.id];
               return (
                 <button
                   key={t.id}
                   onClick={() => onNavigate(t.id)}
                   className={cn(
-                    'rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors',
+                    'flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors',
                     isActive
                       ? 'bg-maroon text-cream-50'
                       : 'text-ink-soft hover:bg-cream-200 hover:text-ink'
                   )}
                 >
+                  {Icon && <Icon size={16} strokeWidth={1.8} />}
                   {t.label}
                 </button>
               );

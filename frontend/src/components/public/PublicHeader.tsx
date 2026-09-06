@@ -8,16 +8,25 @@ export function PublicHeader() {
         <Link to="/">
           <Logo />
         </Link>
-        <nav className="hidden items-center gap-8 text-sm text-ink-soft md:flex">
+        <nav className="hidden items-center gap-6 text-sm text-ink-soft md:flex">
           <a href="#products" className="hover:text-maroon">Products</a>
           <a href="#estimator" className="hover:text-maroon">Estimator</a>
           <a href="#security" className="hover:text-maroon">Security</a>
+          <div className="ml-2 flex items-center gap-3">
+            <Link to="/login">
+              <Button variant="ghost" size="sm">Sign in</Button>
+            </Link>
+            <Link to="/onboarding" className="hidden sm:block">
+              <Button size="sm">Get started</Button>
+            </Link>
+          </div>
         </nav>
-        <div className="flex items-center gap-3">
+        {/* Mobile-only auth buttons */}
+        <div className="flex items-center gap-3 md:hidden">
           <Link to="/login">
             <Button variant="ghost" size="sm">Sign in</Button>
           </Link>
-          <Link to="/onboarding" className="hidden sm:block">
+          <Link to="/onboarding">
             <Button size="sm">Get started</Button>
           </Link>
         </div>

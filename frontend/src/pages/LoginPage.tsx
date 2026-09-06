@@ -78,12 +78,8 @@ export default function LoginPage() {
               error={errors.password?.message}
               {...register('password')}
             />
-            <Input
-              label="Tenant ID"
-              hint="Pre-filled with the demo tenant."
-              error={errors.tenantId?.message}
-              {...register('tenantId')}
-            />
+            {/* tenantId is pre-filled from DEMO_TENANT_ID — hidden from UI */}
+            <input type="hidden" {...register('tenantId')} />
 
             {formError && (
               <div className="rounded-lg border border-maroon/20 bg-maroon-tint px-3 py-2 text-sm text-maroon">

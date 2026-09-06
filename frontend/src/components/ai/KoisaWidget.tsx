@@ -4,6 +4,7 @@ import { toApiError } from '@/api/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useKoisaActions } from '@/hooks/useKoisaActions';
 import { detectsSensitive, SENSITIVE_WARNING } from '@/lib/sensitive';
+import { MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 type Sender = 'user' | 'koisa' | 'system';
@@ -79,18 +80,18 @@ export function KoisaWidget() {
         onClick={() => setOpen((o) => !o)}
         aria-label="Open Koisa assistant"
         className={cn(
-          'fixed bottom-6 right-6 z-40 flex h-14 items-center gap-2 rounded-full bg-maroon px-5 text-cream-50 shadow-lift transition-transform hover:scale-105',
+          'fixed bottom-6 right-6 z-40 flex h-14 items-center gap-2 rounded-full bg-maroon px-5 text-cream-50 shadow-lift transition-all hover:scale-105 sm:bottom-6 sm:right-6',
           open && 'scale-0 opacity-0'
         )}
       >
-        <span className="h-2.5 w-2.5 rounded-full bg-cream-50" />
+        <MessageCircle size={20} className="text-cream-50" strokeWidth={1.8} />
         <span className="font-semibold">Ask Koisa</span>
       </button>
 
       {/* Drawer */}
       <div
         className={cn(
-          'fixed bottom-6 right-6 z-40 flex w-[min(24rem,calc(100vw-3rem))] flex-col overflow-hidden rounded-2xl border border-cream-300 bg-cream-50 shadow-lift transition-all',
+          'fixed bottom-6 right-6 z-40 flex w-[min(24rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl border border-cream-300 bg-cream-50 shadow-lift transition-all sm:w-[min(24rem,calc(100vw-3rem))]',
           open ? 'h-[32rem] opacity-100' : 'pointer-events-none h-0 opacity-0'
         )}
       >
