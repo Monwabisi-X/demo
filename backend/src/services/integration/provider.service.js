@@ -9,7 +9,10 @@
 
 const config = require('../../config');
 const logger = require('../../config/logger');
+const { getAdapter } = require('./adapters');
 
+// Insurer providers the platform can address. Government providers (e.g. sars) are addressed
+// by adapter code directly rather than via this insurer allow-list.
 const SUPPORTED = ['santam', 'sanlam', 'discovery', 'liberty', 'old_mutual'];
 
 function normalize(payload) {
@@ -73,10 +76,15 @@ async function dispatch({ tenantId, clientId, provider, submissionType, channel,
     return result;
   }
 
-  if (!SUPPORTED.includes(provider)) {
+  const adapter = getAdapter(provider);
+
+  // A provider is addressable if it's a known insurer OR has a registered adapter (e.g. sars).
+  if (!SUPPORTED.includes(provider) && !adapter) {
     return finalize({ status: 'failed', error: `Unsupported provider: ${provider}`, provider });
   }
 
+  // Simulation mode: default in dev/test (or when S3 isn't configured). Lets the whole
+  // straight-through flow be exercised without vendor credentials or spend.
   if (config.features.integrationSimulation || !config.aws.s3Bucket) {
     logger.info('provider dispatch (simulated)', { provider, submissionType, idempotencyKey: key });
     return finalize({
@@ -87,8 +95,22 @@ async function dispatch({ tenantId, clientId, provider, submissionType, channel,
     });
   }
 
-  // Real adapter dispatch would go here (per-provider adapter modules).
-  logger.warn('real provider dispatch not configured; refusing to send', { provider });
+  // Real dispatch via a registered adapter (Santam, SARS, …). Adapters resolve their own
+  // credentials from Secrets Manager and return a uniform result.
+  if (adapter && typeof adapter.send === 'function') {
+    if (typeof adapter.supports === 'function' && !adapter.supports(submissionType)) {
+      return finalize({ status: 'failed', error: `${provider} adapter does not support ${submissionType}`, provider });
+    }
+    try {
+      const result = await adapter.send({ submissionType, payload: normalized, idempotencyKey: key });
+      return finalize({ provider, ...result });
+    } catch (err) {
+      logger.error('adapter dispatch failed', { provider, submissionType, message: err.message });
+      return finalize({ status: 'failed', error: err.message, provider });
+    }
+  }
+
+  logger.warn('no adapter registered for provider; refusing to send', { provider });
   return finalize({ status: 'failed', error: 'Provider adapter not configured', provider });
 }
 

@@ -9,11 +9,13 @@
 
 locals {
   secret_names = [
-    "db-password",      # RDS master password
-    "jwt-secret",       # backend JWT signing secret (>=32 chars)
-    "encryption-key",   # app-level field encryption key (envelope via KMS in prod)
-    "smile-id-api-key", # Smile ID partner API key for identity verification
-    "provider-webhooks" # JSON map of per-provider inbound webhook HMAC secrets
+    "db-password",        # RDS master password
+    "jwt-secret",         # backend JWT signing secret (>=32 chars)
+    "encryption-key",     # app-level field encryption key (envelope via KMS in prod)
+    "smile-id-api-key",   # Smile ID partner API key for identity verification
+    "provider-webhooks",  # JSON map of per-provider inbound webhook HMAC secrets
+    "integration-santam", # Santam adapter: JSON { baseUrl, apiKey }
+    "integration-sars"    # SARS adapter: JSON { baseUrl, apiKey|clientId }
   ]
 }
 

@@ -202,3 +202,32 @@ test('Reminders: cadence rolls next_run_at forward', () => {
   const next = reminder.nextRunFrom(base, '1 year');
   assert.ok(next.getTime() > base.getTime());
 });
+
+
+// ── Integration adapters (real skeletons) ────────────────────────────────────────
+const adapters = require('../src/services/integration/adapters');
+
+test('Adapters: registry exposes santam (insurer) and sars (government)', () => {
+  const providers = adapters.registeredProviders();
+  assert.ok(providers.includes('santam'));
+  assert.ok(providers.includes('sars'));
+  assert.equal(adapters.getAdapter('santam').kind, 'insurer');
+  assert.equal(adapters.getAdapter('sars').kind, 'government');
+  assert.equal(adapters.getAdapter('nope'), null);
+});
+
+test('Adapters: supports() gates submission types per adapter', () => {
+  const santam = adapters.getAdapter('santam');
+  const sars = adapters.getAdapter('sars');
+  assert.equal(santam.supports('CLAIM'), true);
+  assert.equal(santam.supports('REQUEST_IRP5'), false);
+  assert.equal(sars.supports('REQUEST_IRP5'), true);
+  assert.equal(sars.supports('CLAIM'), false);
+});
+
+test('Adapters: send() fails cleanly when not configured (no secret)', async () => {
+  const santam = adapters.getAdapter('santam');
+  const res = await santam.send({ submissionType: 'CLAIM', payload: {}, idempotencyKey: 'k1' });
+  assert.equal(res.status, 'failed');
+  assert.match(res.error, /not configured/i);
+});
