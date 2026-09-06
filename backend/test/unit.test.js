@@ -119,3 +119,53 @@ test('RBAC: MEDICAL_READ is not implied by CLIENT_READ (adviser)', () => {
   assert.equal(rbac.can(['ADVISER'], 'CLIENT_READ'), true);
   assert.equal(rbac.can(['ADVISER'], 'MEDICAL_READ'), false);
 });
+
+
+// ── Phase 2: RBAC additions + self-ownership + Koisa tab validity ────────────────
+const ownership = require('../src/middleware/ownership');
+
+test('RBAC: CLIENT holds CONTENT_READ (learning) but staff-only CONTENT_WRITE is withheld', () => {
+  assert.equal(rbac.can(['CLIENT'], 'CONTENT_READ'), true);
+  assert.equal(rbac.can(['CLIENT'], 'CONTENT_WRITE'), false);
+  assert.equal(rbac.can(['ADVISER'], 'CONTENT_WRITE'), true);
+});
+
+function runMw(mw, req) {
+  return new Promise((resolve) => mw(req, {}, (err) => resolve(err)));
+}
+
+test('Ownership: self-scoped CLIENT can only access their own clientId (URL param)', async () => {
+  const mw = ownership.enforceClientScope(['CLIENT_READ', 'CLIENT_UPDATE']);
+  const principal = { roles: ['CLIENT'], clientId: 'client-1', tenantId: 't1' };
+
+  const ownOk = await runMw(mw, { principal, params: { clientId: 'client-1' }, body: {} });
+  assert.equal(ownOk, undefined, 'own client should pass');
+
+  const other = await runMw(mw, { principal, params: { clientId: 'client-2' }, body: {} });
+  assert.ok(other && other.status === 403, 'another client should be forbidden');
+});
+
+test('Ownership: staff (broad permission) may access any clientId', async () => {
+  const mw = ownership.enforceClientScope(['CLIENT_READ', 'CLIENT_UPDATE']);
+  const principal = { roles: ['ADVISER'], clientId: null, tenantId: 't1' };
+  const err = await runMw(mw, { principal, params: { clientId: 'anyone' }, body: {} });
+  assert.equal(err, undefined, 'adviser should not be self-scoped');
+});
+
+test('Ownership: financial scope treats CLIENT (read-only) as self-scoped', async () => {
+  // CLIENT holds FINANCIAL_READ but not FINANCIAL_WRITE, so scoping on WRITE keeps them self-scoped.
+  const mw = ownership.enforceClientScope(['FINANCIAL_WRITE']);
+  const principal = { roles: ['CLIENT'], clientId: 'client-1', tenantId: 't1' };
+  const other = await runMw(mw, { principal, params: { clientId: 'client-9' }, body: {} });
+  assert.ok(other && other.status === 403, 'client must not read another client financials');
+});
+
+test('Koisa: navigate_to_tab rejects tabs that do not exist and accepts real ones', async () => {
+  const principal = { userId: 'u1', clientId: 'c1', tenantId: 't1', roles: ['CLIENT'] };
+  const ok = await koisa.runTool({ principal, mode: 'authenticated', toolName: 'navigate_to_tab', input: { tab: 'learning' } });
+  assert.equal(ok.tab, 'learning');
+  await assert.rejects(
+    () => koisa.runTool({ principal, mode: 'authenticated', toolName: 'navigate_to_tab', input: { tab: 'goals' } }),
+    /Unknown tab/
+  );
+});

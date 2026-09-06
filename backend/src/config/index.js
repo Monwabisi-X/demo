@@ -51,7 +51,8 @@ const config = {
 
   auth: {
     jwtSecret: process.env.JWT_SECRET || (isProd ? undefined : 'dev_secret_change_me_012345678901234567890'),
-    jwtExpiry: process.env.JWT_EXPIRY || '7d',
+    // Short-lived access tokens; clients transparently refresh via the 30d refresh token.
+    jwtExpiry: process.env.JWT_EXPIRY || '1h',
     refreshTokenExpiry: process.env.REFRESH_TOKEN_EXPIRY || '30d',
   },
 

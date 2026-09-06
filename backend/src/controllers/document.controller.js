@@ -44,7 +44,7 @@ async function uploadConsent(req, res) {
 }
 
 async function download(req, res) {
-  return ok(res, await documentService.getDownloadUrl(req.params.documentId));
+  return ok(res, await documentService.getDownloadUrl(req.params.documentId, req.principal));
 }
 
 async function remove(req, res) {

@@ -61,14 +61,21 @@ export function DocumentsPanel({ clientId }: { clientId: string }) {
                 </div>
                 <div className="flex items-center gap-3">
                   <Badge tone={statusTone(d.review_status)}>{d.review_status}</Badge>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    loading={downloading === d.id}
-                    onClick={() => handleDownload(d.id)}
-                  >
-                    Download
-                  </Button>
+                  {/* Only offer download once the file has actually finished uploading to S3. */}
+                  {d.upload_status === 'uploaded' ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      loading={downloading === d.id}
+                      onClick={() => handleDownload(d.id)}
+                    >
+                      Download
+                    </Button>
+                  ) : (
+                    <Badge tone="neutral">
+                      {d.upload_status === 'pending' ? 'Upload pending' : d.upload_status}
+                    </Badge>
+                  )}
                 </div>
               </li>
             ))}

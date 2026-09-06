@@ -39,8 +39,28 @@ async function roleCodesForUser(user) {
   return roles.map((r) => r.code);
 }
 
-async function register({ tenantId, email, displayName, password, roleCodes = ['CLIENT'] }) {
-  const { User, Role } = models();
+// Roles a user may self-assign via the PUBLIC /auth/register endpoint. Public registration is
+// only ever for prospective clients; privileged roles must be granted by an admin (createUser).
+const SELF_REGISTER_ROLES = ['CLIENT'];
+
+async function register({ tenantId, email, displayName, password, roleCodes = ['CLIENT'], selfService = true }) {
+  const { User, Role, Tenant } = models();
+
+  // Tenant guard: the target tenant must exist and be active. Without this, /auth/register
+  // trusts an arbitrary tenantId from the request body.
+  const tenant = await Tenant.findByPk(tenantId);
+  if (!tenant || tenant.status !== 'active') {
+    throw new AppError('INVALID_REFERENCE', 'Unknown or inactive tenant', 400);
+  }
+
+  // For public self-service registration, ignore any requested privileged roles and force
+  // CLIENT. Admin-driven creation (selfService: false) may assign explicit roles.
+  const requestedRoles = Array.isArray(roleCodes) && roleCodes.length ? roleCodes : ['CLIENT'];
+  const effectiveRoles = selfService
+    ? requestedRoles.filter((c) => SELF_REGISTER_ROLES.includes(c))
+    : requestedRoles;
+  const finalRoles = effectiveRoles.length ? effectiveRoles : ['CLIENT'];
+
   const existing = await User.findOne({ where: { tenant_id: tenantId, email } });
   if (existing) throw new AppError('DUPLICATE_RESOURCE', 'A user with that email already exists', 409);
 
@@ -51,7 +71,7 @@ async function register({ tenantId, email, displayName, password, roleCodes = ['
     password_hash: await hashPassword(password),
   });
 
-  const roles = await Role.findAll({ where: { code: roleCodes } });
+  const roles = await Role.findAll({ where: { code: finalRoles } });
   if (roles.length) await user.setRoles(roles);
 
   return sanitize(user);
@@ -212,7 +232,8 @@ async function revokeSession({ userId, sessionId }) {
 
 // ── Admin user management ────────────────────────────────────────────────────────
 async function createUser({ tenantId, email, displayName, password, roleCodes = [] }) {
-  return register({ tenantId, email, displayName, password, roleCodes });
+  // Admin-driven creation: trusted caller may assign any role(s).
+  return register({ tenantId, email, displayName, password, roleCodes, selfService: false });
 }
 
 async function updateUser({ tenantId, userId, displayName, email, status, roleCodes }) {

@@ -10,6 +10,7 @@ const crypto = require('crypto');
 const s3 = require('./s3.service');
 const config = require('../../config');
 const { AppError } = require('../../utils/errors');
+const { permissionsForRoles, PERMISSIONS } = require('../auth/rbac.service');
 
 function models() {
   return require('../../models');
@@ -129,10 +130,30 @@ async function listForClient(clientId) {
   });
 }
 
-async function getDownloadUrl(documentId) {
+/**
+ * Presign a download URL. `principal` is used to enforce access control: the document must be
+ * in the caller's tenant, and a self-scoped CLIENT (one linked to a specific client_id who is
+ * not staff) may only download documents belonging to their own client record. This prevents
+ * an authenticated client from fetching another client's document by guessing its id (IDOR).
+ */
+async function getDownloadUrl(documentId, principal) {
   const { Document } = models();
   const doc = await Document.findByPk(documentId);
   if (!doc || doc.deleted_at) throw new AppError('NOT_FOUND', 'Document not found', 404);
+
+  if (principal) {
+    // Tenant isolation.
+    if (doc.tenant_id && principal.tenantId && doc.tenant_id !== principal.tenantId) {
+      throw new AppError('NOT_FOUND', 'Document not found', 404);
+    }
+    // Self-scoped clients may only access their own client's documents.
+    const held = permissionsForRoles(principal.roles || []);
+    const isStaff = held.has(PERMISSIONS.DOCUMENT_WRITE);
+    if (!isStaff && principal.clientId && doc.client_id && doc.client_id !== principal.clientId) {
+      throw new AppError('FORBIDDEN', 'You can only access your own documents', 403);
+    }
+  }
+
   if (!doc.s3_key) throw new AppError('NOT_FOUND', 'Document has no stored file', 404);
   const url = await s3.presignDownload({ key: doc.s3_key, versionId: doc.s3_version_id });
   return { url, expiresInSeconds: 300, filename: doc.title };
