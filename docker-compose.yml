@@ -1,0 +1,75 @@
+name: royal-square-local
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+    command: ["sh", "-c", "npm run migrate && node src/server.js"]
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: royalsquare
+      DB_USER: royalsquare
+      DB_PASSWORD: ${DB_PASSWORD:-local_dev_only}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:-dev_secret_change_me_012345678901234567890}
+      JWT_EXPIRY: 1h
+      REFRESH_TOKEN_EXPIRY: 30d
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef}
+      AWS_REGION: af-south-1
+      CORS_ORIGIN: http://localhost:8080,http://localhost:3000
+      ENABLE_MEDICAL_MODULE: ${ENABLE_MEDICAL_MODULE:-false}
+      ENABLE_CLAIMS_MODULE: ${ENABLE_CLAIMS_MODULE:-false}
+      ENABLE_INTEGRATION_SIMULATION: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: royalsquare
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-local_dev_only}
+      POSTGRES_DB: royalsquare
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U royalsquare -d royalsquare"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
