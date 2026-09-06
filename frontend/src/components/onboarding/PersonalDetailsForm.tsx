@@ -16,7 +16,17 @@ export function PersonalDetailsForm({
     formState: { errors },
   } = useForm<ClientFormData>({
     resolver: zodResolver(clientSchema),
-    defaultValues: { title: '', firstName: '', surname: '', idNumber: '', email: '', mobile: '', ...defaultValues },
+    defaultValues: {
+      title: '',
+      firstName: '',
+      surname: '',
+      idNumber: '',
+      email: '',
+      mobile: '',
+      password: '',
+      confirmPassword: '',
+      ...defaultValues,
+    },
   });
 
   return (
@@ -49,6 +59,7 @@ export function PersonalDetailsForm({
             label="Email"
             type="email"
             className="sm:col-span-2"
+            hint="This becomes your client portal login email."
             error={errors.email?.message}
             {...register('email')}
           />
@@ -56,6 +67,33 @@ export function PersonalDetailsForm({
         <p className="mt-4 text-xs text-ink-faint">
           Your ID number is transmitted over TLS and encrypted at rest with AWS KMS. Please
           don't share it anywhere else, including with Koisa.
+        </p>
+      </Card>
+
+      <Card>
+        <p className="eyebrow mb-4">Create your client portal password</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input
+            label="Password"
+            type="password"
+            autoComplete="new-password"
+            placeholder="••••••••"
+            hint="At least 8 characters."
+            error={errors.password?.message}
+            {...register('password')}
+          />
+          <Input
+            label="Confirm password"
+            type="password"
+            autoComplete="new-password"
+            placeholder="••••••••"
+            error={errors.confirmPassword?.message}
+            {...register('confirmPassword')}
+          />
+        </div>
+        <p className="mt-4 text-xs text-ink-faint">
+          You'll use this email and password to sign in at the client portal (/client-login)
+          once your profile is submitted.
         </p>
       </Card>
 

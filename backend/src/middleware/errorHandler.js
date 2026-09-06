@@ -34,6 +34,26 @@ function mapError(err) {
       return new AppError('DUPLICATE_RESOURCE', 'Resource already exists', 409);
     case 'SequelizeForeignKeyConstraintError':
       return new AppError('INVALID_REFERENCE', 'Referenced resource does not exist', 400);
+    case 'SequelizeConnectionError':
+    case 'SequelizeConnectionRefusedError':
+    case 'SequelizeHostNotFoundError':
+    case 'SequelizeAccessDeniedError':
+      return new AppError(
+        'DATABASE_UNAVAILABLE',
+        'Could not connect to the database. Check that PostgreSQL is running and DB_HOST/DB_PORT/DB_USER/DB_PASSWORD in .env are correct.',
+        503
+      );
+    case 'SequelizeDatabaseError':
+      // Postgres 42P01 = undefined_table — the single most common local setup mistake:
+      // migrations were never run against this database.
+      if (err.original && err.original.code === '42P01') {
+        return new AppError(
+          'SCHEMA_NOT_READY',
+          'A required database table is missing. Run `npm run migrate` against this database, then retry.',
+          503
+        );
+      }
+      return null;
     case 'JsonWebTokenError':
       return new AppError('INVALID_TOKEN', 'Invalid token', 401);
     case 'TokenExpiredError':

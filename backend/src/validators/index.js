@@ -27,6 +27,19 @@ const auth = {
     displayName: Joi.string().min(1).max(200).required(),
     password: Joi.string().min(8).max(200).required(),
     roleCodes: Joi.array().items(Joi.string()).default(['CLIENT']),
+    // Optional client intake, captured during self-service onboarding. When present, a
+    // Client record is created and linked to the new user in the same transaction.
+    clientProfile: Joi.object({
+      clientType: Joi.string().valid('individual', 'legal_entity').default('individual'),
+      title: Joi.string().max(30).optional().allow(''),
+      firstName: Joi.string().max(100).optional(),
+      surname: Joi.string().max(100).optional(),
+      idNumber: Joi.string().max(64).optional().allow(''),
+      passportNumber: Joi.string().max(64).optional().allow(''),
+      taxNumber: Joi.string().max(64).optional().allow(''),
+      email: Joi.string().email().optional(),
+      mobile: Joi.string().max(40).optional().allow(''),
+    }).optional(),
   }),
   refresh: Joi.object({ refreshToken: Joi.string().required() }),
   logout: Joi.object({ refreshToken: Joi.string().optional() }),

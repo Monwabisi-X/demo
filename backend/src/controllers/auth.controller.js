@@ -22,7 +22,8 @@ async function clientLogin(req, res) {
 }
 
 async function register(req, res) {
-  const user = await authService.register(req.body);
+  const { clientProfile, ...rest } = req.body;
+  const user = await authService.register({ ...rest, clientProfile });
   return ok(res, user, 201);
 }
 
