@@ -15,6 +15,8 @@ module.exports = (sequelize) =>
       audience: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'both' },
       channel: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'email' },
       cadence_interval: { type: DataTypes.STRING(40), allowNull: false, defaultValue: '1 year' },
+      cadence_anchor_day: { type: DataTypes.SMALLINT, allowNull: false },
+      cadence_anchor_month_end: { type: DataTypes.BOOLEAN, allowNull: false },
       lead_days: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 14 },
       next_run_at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
       last_run_at: { type: DataTypes.DATE },

@@ -134,12 +134,14 @@ export interface LearningArticle {
   updated_at?: string;
 }
 
+export type KoisaNavigationAction = {
+  type: 'navigate';
+  tab: 'overview' | 'financial_position' | 'policies' | 'claims' | 'documents' | 'goals' | 'learning' | 'profile';
+};
+
 export interface KoisaChatResponse {
   mode: 'public' | 'authenticated';
-  warning?: string | null;
+  warning: string | null;
   reply: string;
-  availableTools?: string[];
-  toolResults?: Array<{ tool: string; result: unknown }>;
-  // Some deployments return a structured navigation directive:
-  tool_call?: { name: string; args?: { target_tab?: string; tab?: string } };
+  actions: KoisaNavigationAction[];
 }

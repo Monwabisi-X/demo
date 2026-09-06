@@ -26,7 +26,7 @@ async function update(req, res) {
 
 // Manual trigger of the scheduler tick (also invoked by EventBridge/worker in prod).
 async function run(req, res) {
-  return ok(res, await reminders.runDueReminders({}));
+  return ok(res, await reminders.runDueReminders({ tenantId: req.principal.tenantId }));
 }
 
 module.exports = { list, create, update, run };

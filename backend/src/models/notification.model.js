@@ -19,6 +19,16 @@ module.exports = (sequelize) =>
       sent_at: { type: DataTypes.DATE },
       failed_at: { type: DataTypes.DATE },
       failure_reason: { type: DataTypes.TEXT },
+      reminder_rule_id: { type: DataTypes.UUID },
+      scheduled_for: { type: DataTypes.DATE },
+      audience: { type: DataTypes.STRING(20) },
+      processing_started_at: { type: DataTypes.DATE },
     },
-    { tableName: 'notifications' }
+    {
+      tableName: 'notifications',
+      indexes: [
+        { unique: true, fields: ['reminder_rule_id', 'scheduled_for', 'audience'] },
+        { fields: ['status', 'processing_started_at', 'queued_at', 'id'] },
+      ],
+    }
   );

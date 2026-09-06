@@ -67,6 +67,12 @@ const POLICY = loadPolicy();
 const SA_ID_RE = /\b\d{6}[\s-]?\d{4}[\s-]?\d{3}\b/;
 const LONG_DIGITS_RE = /\b(?:\d[\s-]?){11,}\b/;
 const CARD_RE = /\b(?:\d[ -]?){13,19}\b/;
+const EMAIL_RE = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
+const SA_PHONE_RE = /(?:\+27|0)[6-8]\d{8}\b/;
+const UUID_RE = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i;
+const NAME_DISCLOSURE_RE = /\b(?:my (?:full )?name is|full name\s*:|name\s*:)\s+[a-z][a-z' -]{1,80}/i;
+const ADDRESS_RE = /\b(?:(?:my (?:home|physical|residential|street) )?address is|i live at|address\s*:)|\b\d{1,5}\s+[a-z][a-z' -]{1,80}\s(?:street|st|road|rd|avenue|ave|drive|dr|lane|ln|close|crescent|boulevard|blvd)\b/i;
+const DOB_RE = /\b(?:date of birth|birth date|born on|dob\s*:?)\b/i;
 const KEYWORD_RE = /\b(id\s*number|identity\s*number|passport\s*(number|no)|tax\s*(number|no)|bank\s*account|account\s*number|branch\s*code|card\s*number|cvv|pin|password|otp|medical|diagnosis|illness|medication|hiv|cancer|diabetes)\b/i;
 
 function detectSensitiveInput(text) {
@@ -75,8 +81,18 @@ function detectSensitiveInput(text) {
   if (SA_ID_RE.test(text)) categories.push('sa_id_number');
   if (CARD_RE.test(text)) categories.push('card_or_account_number');
   else if (LONG_DIGITS_RE.test(text)) categories.push('long_number');
+  if (EMAIL_RE.test(text)) categories.push('email_address');
+  if (SA_PHONE_RE.test(text)) categories.push('phone_number');
+  if (UUID_RE.test(text)) categories.push('raw_identifier');
+  if (NAME_DISCLOSURE_RE.test(text)) categories.push('name');
+  if (ADDRESS_RE.test(text)) categories.push('physical_address');
+  if (DOB_RE.test(text)) categories.push('date_of_birth');
   if (KEYWORD_RE.test(text)) categories.push('sensitive_keyword');
   return { sensitive: categories.length > 0, categories };
+}
+
+function containsRawIdentifier(text) {
+  return UUID_RE.test(String(text || ''));
 }
 
 function keyIsDenied(key, denied) {
@@ -115,6 +131,7 @@ function assertToolAllowed(mode, toolName) {
 module.exports = {
   POLICY,
   detectSensitiveInput,
+  containsRawIdentifier,
   redactDenied,
   toolsForMode,
   assertToolAllowed,

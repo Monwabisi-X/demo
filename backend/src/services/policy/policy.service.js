@@ -10,16 +10,18 @@ function models() {
 // Never return the ciphertext column; only the masked policy number.
 const EXCLUDE = ['policy_number_ciphertext'];
 
-async function listForClient(clientId) {
+async function listForClient(clientId, options = {}) {
   const { Policy, Provider, Product } = models();
   return Policy.findAll({
     where: { client_id: clientId },
-    attributes: { exclude: EXCLUDE },
+    attributes: options.attributes || { exclude: EXCLUDE },
     include: [
       { model: Provider, attributes: ['trading_name', 'legal_name'] },
       { model: Product, attributes: ['product_name', 'category'] },
     ],
     order: [['created_at', 'DESC']],
+    ...(options.limit ? { limit: options.limit } : {}),
+    transaction: options.transaction,
   });
 }
 

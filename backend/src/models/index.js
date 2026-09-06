@@ -127,6 +127,8 @@ Tenant.hasMany(ReminderRule, { foreignKey: 'tenant_id' });
 ReminderRule.belongsTo(Tenant, { foreignKey: 'tenant_id' });
 Client.hasMany(ReminderRule, { foreignKey: 'client_id' });
 ReminderRule.belongsTo(Client, { foreignKey: 'client_id' });
+ReminderRule.hasMany(Notification, { foreignKey: 'reminder_rule_id', as: 'notifications' });
+Notification.belongsTo(ReminderRule, { foreignKey: 'reminder_rule_id', as: 'reminderRule' });
 
 Tenant.hasMany(IntegrationSubmission, { foreignKey: 'tenant_id' });
 IntegrationSubmission.belongsTo(Tenant, { foreignKey: 'tenant_id' });
