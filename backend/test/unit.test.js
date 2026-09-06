@@ -165,7 +165,40 @@ test('Koisa: navigate_to_tab rejects tabs that do not exist and accepts real one
   const ok = await koisa.runTool({ principal, mode: 'authenticated', toolName: 'navigate_to_tab', input: { tab: 'learning' } });
   assert.equal(ok.tab, 'learning');
   await assert.rejects(
-    () => koisa.runTool({ principal, mode: 'authenticated', toolName: 'navigate_to_tab', input: { tab: 'goals' } }),
+    () => koisa.runTool({ principal, mode: 'authenticated', toolName: 'navigate_to_tab', input: { tab: 'service_requests' } }),
     /Unknown tab/
   );
+});
+
+
+// ── Phase 3: goals progress, claim lifecycle template, RBAC for new domains ──────
+const goalService = require('../src/services/goal/goal.service');
+const claimService = require('../src/services/claim/claim.service');
+
+test('Goals: progress % is computed and clamped to 100', () => {
+  assert.equal(goalService.withProgress({ target_amount: 1000, current_amount: 250 }).progress_pct, 25);
+  assert.equal(goalService.withProgress({ target_amount: 1000, current_amount: 4000 }).progress_pct, 100);
+  assert.equal(goalService.withProgress({ target_amount: 0, current_amount: 100 }).progress_pct, 0);
+});
+
+test('Claims: motor lifecycle template is ordered and complete', () => {
+  assert.equal(claimService.MOTOR_LIFECYCLE[0], 'CLAIM_NUMBER_ISSUED');
+  assert.equal(claimService.MOTOR_LIFECYCLE[claimService.MOTOR_LIFECYCLE.length - 1], 'CLIENT_REVIEW_CLOSED');
+  assert.equal(new Set(claimService.MOTOR_LIFECYCLE).size, claimService.MOTOR_LIFECYCLE.length);
+});
+
+test('RBAC: CLIENT can read goals + raise service requests; staff manage them', () => {
+  assert.equal(rbac.can(['CLIENT'], 'GOALS_READ'), true);
+  assert.equal(rbac.can(['CLIENT'], 'GOALS_WRITE'), false);
+  assert.equal(rbac.can(['CLIENT'], 'SERVICE_REQUEST_WRITE'), true);
+  assert.equal(rbac.can(['ADVISER'], 'GOALS_WRITE'), true);
+  assert.equal(rbac.can(['ADVISER'], 'INTEGRATION_READ'), true);
+  assert.equal(rbac.can(['CLIENT'], 'INTEGRATION_READ'), false);
+});
+
+test('Reminders: cadence rolls next_run_at forward', () => {
+  const reminder = require('../src/services/reminder/reminder.service');
+  const base = new Date('2026-01-01T00:00:00Z');
+  const next = reminder.nextRunFrom(base, '1 year');
+  assert.ok(next.getTime() > base.getTime());
 });

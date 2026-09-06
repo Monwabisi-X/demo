@@ -28,7 +28,7 @@ const { AppError } = require('../../utils/errors');
 // frontend/src/components/dashboard/DashboardShell.tsx). Only tabs that actually render are
 // valid navigation targets; previously this set listed tabs that don't exist.
 const VALID_TABS = new Set([
-  'overview', 'financial_position', 'policies', 'claims', 'documents', 'learning', 'profile',
+  'overview', 'financial_position', 'policies', 'claims', 'documents', 'goals', 'learning', 'profile',
 ]);
 
 // ── Tool implementations ───────────────────────────────────────────────────────

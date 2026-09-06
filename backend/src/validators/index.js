@@ -141,6 +141,82 @@ const claim = {
     narrative: Joi.string().max(5000).optional(),
     closed_at: Joi.date().optional(),
   }).min(1),
+  advanceStep: Joi.object({
+    stepKey: Joi.string().max(80).required(),
+    status: Joi.string().valid('pending', 'in_progress', 'done', 'skipped').default('done'),
+    detail: Joi.string().max(2000).optional(),
+  }),
+};
+
+const goal = {
+  create: Joi.object({
+    clientId: uuid.required(),
+    householdId: uuid.optional(),
+    scope: Joi.string().valid('individual', 'shared').default('individual'),
+    category: Joi.string().max(80).optional(),
+    name: Joi.string().max(250).required(),
+    description: Joi.string().max(2000).optional(),
+    targetAmount: Joi.number().min(0).default(0),
+    currentAmount: Joi.number().min(0).default(0),
+    currencyCode: Joi.string().length(3).default('ZAR'),
+    targetDate: Joi.date().optional(),
+  }),
+  update: Joi.object({
+    name: Joi.string().max(250).optional(),
+    description: Joi.string().max(2000).optional(),
+    category: Joi.string().max(80).optional(),
+    targetAmount: Joi.number().min(0).optional(),
+    currentAmount: Joi.number().min(0).optional(),
+    targetDate: Joi.date().optional(),
+    status: Joi.string().valid('active', 'achieved', 'paused', 'cancelled').optional(),
+  }).min(1),
+};
+
+const reminder = {
+  create: Joi.object({
+    clientId: uuid.optional(),
+    reminderType: Joi.string().max(100).required(),
+    title: Joi.string().max(250).required(),
+    audience: Joi.string().valid('us', 'client', 'both').default('both'),
+    channel: Joi.string().valid('email', 'sms', 'whatsapp').default('email'),
+    cadenceInterval: Joi.string().max(40).default('1 year'),
+    leadDays: Joi.number().integer().min(0).max(365).default(14),
+    nextRunAt: Joi.date().optional(),
+    entityType: Joi.string().max(100).optional(),
+    entityId: uuid.optional(),
+  }),
+  update: Joi.object({
+    title: Joi.string().max(250).optional(),
+    audience: Joi.string().valid('us', 'client', 'both').optional(),
+    channel: Joi.string().valid('email', 'sms', 'whatsapp').optional(),
+    cadenceInterval: Joi.string().max(40).optional(),
+    leadDays: Joi.number().integer().min(0).max(365).optional(),
+    nextRunAt: Joi.date().optional(),
+    active: Joi.boolean().optional(),
+  }).min(1),
+};
+
+const serviceRequest = {
+  create: Joi.object({
+    clientId: uuid.optional(), // defaults to the caller's own client for CLIENT users
+    requestType: Joi.string()
+      .valid(
+        'CHANGE_OF_ADDRESS',
+        'CHANGE_OF_BANK',
+        'REQUEST_POLICY_DOCUMENT',
+        'REQUEST_BORDER_LETTER',
+        'REQUEST_IRP5',
+        'REQUEST_CONSULTATION'
+      )
+      .required(),
+    details: Joi.object().unknown(true).default({}),
+    policyId: uuid.optional(),
+    providerId: uuid.optional(),
+  }),
+  update: Joi.object({
+    status: Joi.string().valid('submitted', 'in_progress', 'completed', 'cancelled').optional(),
+    assignedUserId: uuid.optional(),
+  }).min(1),
 };
 
 const document = {
@@ -187,6 +263,13 @@ const compliance = {
     captureMethod: Joi.string().max(50).optional(),
     evidenceDocumentId: uuid.optional(),
   }),
+  verifyIdentity: Joi.object({
+    clientId: uuid.required(),
+    // ID number is sensitive; accepted for the verification call, never persisted in plaintext.
+    idNumber: Joi.string().max(64).optional(),
+    firstName: Joi.string().max(100).optional(),
+    surname: Joi.string().max(100).optional(),
+  }),
 };
 
 const workflow = {
@@ -228,4 +311,7 @@ const koisa = {
   }),
 };
 
-module.exports = { auth, client, financial, policy, claim, document, compliance, workflow, medical, koisa };
+module.exports = {
+  auth, client, financial, policy, claim, document, compliance, workflow, medical, koisa,
+  goal, reminder, serviceRequest,
+};

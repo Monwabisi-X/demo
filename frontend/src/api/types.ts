@@ -94,6 +94,31 @@ export interface StagingSubmission {
   created_at: string;
 }
 
+export interface Goal {
+  id: string;
+  client_id: string;
+  scope: 'individual' | 'shared' | string;
+  category?: string | null;
+  name: string;
+  description?: string | null;
+  target_amount: string;
+  current_amount: string;
+  currency_code?: string;
+  target_date?: string | null;
+  status: string;
+  progress_pct: number;
+}
+
+export interface ServiceRequest {
+  id: string;
+  client_id: string;
+  request_type: string;
+  status: string;
+  details: Record<string, unknown>;
+  created_at: string;
+  resolved_at?: string | null;
+}
+
 export interface LearningArticle {
   id: string;
   category: 'CLAIM_GUIDE' | 'INVESTMENT' | 'TRAINING' | 'GUIDE' | string;

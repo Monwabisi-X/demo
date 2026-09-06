@@ -13,6 +13,7 @@ export interface AdminSection {
 export const ADMIN_SECTIONS: AdminSection[] = [
   { id: 'staging', label: 'Adviser Staging' },
   { id: 'claims', label: 'Claims Board' },
+  { id: 'integrations', label: 'Integrations & Reminders' },
   { id: 'audit', label: 'Audit Log' },
 ];
 

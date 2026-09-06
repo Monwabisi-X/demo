@@ -10,3 +10,5 @@ export { medicalApi } from './medical.api';
 export { stagingApi } from './staging.api';
 export { koisaApi } from './koisa.api';
 export { learningApi } from './learning.api';
+export { goalsApi } from './goals.api';
+export { serviceRequestsApi } from './serviceRequests.api';

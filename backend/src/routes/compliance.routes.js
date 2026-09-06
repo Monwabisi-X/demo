@@ -16,4 +16,7 @@ router.post('/kyc', requirePermission(P.COMPLIANCE_WRITE), validate(v.compliance
 router.get('/consent/:clientId', requirePermission(P.COMPLIANCE_READ), asyncHandler(ctrl.getConsent));
 router.post('/consent', requirePermission(P.COMPLIANCE_WRITE), validate(v.compliance.consent), audit('consent.record', 'consent'), asyncHandler(ctrl.recordConsent));
 
+// Smile ID identity verification (FICA/KYC automation).
+router.post('/verify-identity', requirePermission(P.COMPLIANCE_WRITE), validate(v.compliance.verifyIdentity), audit('identity.verify', 'client', { idParam: 'clientId' }), asyncHandler(ctrl.verifyIdentity));
+
 module.exports = router;

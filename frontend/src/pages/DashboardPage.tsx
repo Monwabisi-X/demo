@@ -7,6 +7,7 @@ import { FinancialPanel } from '@/components/dashboard/panels/FinancialPanel';
 import { PoliciesPanel } from '@/components/dashboard/panels/PoliciesPanel';
 import { ClaimsPanel } from '@/components/dashboard/panels/ClaimsPanel';
 import { DocumentsPanel } from '@/components/dashboard/panels/DocumentsPanel';
+import { GoalsPanel } from '@/components/dashboard/panels/GoalsPanel';
 import { LearningPanel } from '@/components/dashboard/panels/LearningPanel';
 import { ProfilePanel } from '@/components/dashboard/panels/ProfilePanel';
 import { EmptyState } from '@/components/ui';
@@ -50,6 +51,8 @@ export default function DashboardPage() {
         <ClaimsPanel clientId={clientId} />
       ) : active === 'documents' ? (
         <DocumentsPanel clientId={clientId} />
+      ) : active === 'goals' ? (
+        <GoalsPanel clientId={clientId} />
       ) : active === 'profile' ? (
         <ProfilePanel clientId={clientId} />
       ) : (

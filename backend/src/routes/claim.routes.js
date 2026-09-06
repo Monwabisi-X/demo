@@ -19,4 +19,8 @@ router.post('/', requirePermission(P.CLAIMS_WRITE), validate(v.claim.submit), au
 router.put('/:claimId', requirePermission(P.CLAIMS_WRITE), validate(v.claim.update), audit('claim.update', 'claim', { idParam: 'claimId' }), asyncHandler(ctrl.update));
 router.get('/:claimId/status', requirePermission(P.CLAIMS_READ), asyncHandler(ctrl.status));
 
+// Motor-claim lifecycle (assessment → repair → close). Read for client + staff; advance is staff.
+router.get('/:claimId/lifecycle', requirePermission(P.CLAIMS_READ), asyncHandler(ctrl.lifecycle));
+router.put('/:claimId/lifecycle', requirePermission(P.CLAIMS_WRITE), validate(v.claim.advanceStep), audit('claim.step.advance', 'claim', { idParam: 'claimId' }), asyncHandler(ctrl.advanceStep));
+
 module.exports = router;
