@@ -16,6 +16,11 @@ const auth = {
     email: Joi.string().email().required(),
     password: Joi.string().min(8).max(200).required(),
   }),
+  // Client-facing login: email + password only. The tenant is resolved on the server.
+  clientLogin: Joi.object({
+    email: Joi.string().email().required(),
+    password: Joi.string().min(8).max(200).required(),
+  }),
   register: Joi.object({
     tenantId: uuid.required(),
     email: Joi.string().email().required(),

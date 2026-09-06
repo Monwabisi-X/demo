@@ -133,7 +133,7 @@ export default function LandingPage() {
             <Link to="/onboarding">
               <Button size="lg">Get started securely</Button>
             </Link>
-            <Link to="/login">
+            <Link to="/client-login">
               <Button size="lg" variant="outline" className="border-cream-50/30 text-cream-50 hover:bg-cream-50/10">
                 Client sign in
               </Button>

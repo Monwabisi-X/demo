@@ -28,6 +28,7 @@ interface AuthContextValue extends AuthState {
   isAdviser: boolean;
   hasRole: (...codes: string[]) => boolean;
   login: (input: { tenantId: string; email: string; password: string }) => Promise<void>;
+  clientLogin: (input: { email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -85,6 +86,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ user: res.user, roles: res.roles || decodeRoles(res.accessToken), status: 'authenticated' });
   }, []);
 
+  // Client sign-in with email + password only; the backend resolves the tenant.
+  const clientLogin = useCallback<AuthContextValue['clientLogin']>(async (input) => {
+    const res = await authApi.clientLogin(input);
+    setTokens(res.accessToken, res.refreshToken);
+    setState({ user: res.user, roles: res.roles || decodeRoles(res.accessToken), status: 'authenticated' });
+  }, []);
+
   const logout = useCallback<AuthContextValue['logout']>(async () => {
     const refreshToken = getRefreshToken() || undefined;
     try {
@@ -105,10 +113,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAdviser: hasRole('ADVISER', 'ADVISER_ASSISTANT', 'PLATFORM_ADMIN'),
       hasRole,
       login,
+      clientLogin,
       logout,
       refreshUser: loadMe,
     };
-  }, [state, login, logout, loadMe]);
+  }, [state, login, clientLogin, logout, loadMe]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

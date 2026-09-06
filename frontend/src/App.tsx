@@ -3,12 +3,13 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { KoisaWidget } from '@/components/ai/KoisaWidget';
 import LandingPage from '@/pages/LandingPage';
 import LoginPage from '@/pages/LoginPage';
+import ClientLoginPage from '@/pages/ClientLoginPage';
 import OnboardingPage from '@/pages/OnboardingPage';
 import DashboardPage from '@/pages/DashboardPage';
 import AdminPage from '@/pages/AdminPage';
 
 // Routes where the floating Koisa launcher should be hidden (auth surfaces).
-const HIDE_KOISA_ON = new Set(['/login']);
+const HIDE_KOISA_ON = new Set(['/login', '/client-login']);
 
 export default function App() {
   const location = useLocation();
@@ -19,6 +20,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/client-login" element={<ClientLoginPage />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route
           path="/dashboard"

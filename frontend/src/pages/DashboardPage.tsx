@@ -7,6 +7,7 @@ import { FinancialPanel } from '@/components/dashboard/panels/FinancialPanel';
 import { PoliciesPanel } from '@/components/dashboard/panels/PoliciesPanel';
 import { ClaimsPanel } from '@/components/dashboard/panels/ClaimsPanel';
 import { DocumentsPanel } from '@/components/dashboard/panels/DocumentsPanel';
+import { LearningPanel } from '@/components/dashboard/panels/LearningPanel';
 import { ProfilePanel } from '@/components/dashboard/panels/ProfilePanel';
 import { EmptyState } from '@/components/ui';
 
@@ -31,7 +32,10 @@ export default function DashboardPage() {
 
   return (
     <DashboardShell active={active} onNavigate={navigate} ficaStatus={client.data?.fica_status}>
-      {!clientId ? (
+      {/* The Information & Learning tab is tenant-scoped content and needs no linked client. */}
+      {active === 'learning' ? (
+        <LearningPanel />
+      ) : !clientId ? (
         <EmptyState
           title="No client linked to this account"
           description="Client-scoped data requires a linked client record. Advisers can open a client via ?client=<id>."

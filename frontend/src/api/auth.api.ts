@@ -5,6 +5,10 @@ export const authApi = {
   login(input: { tenantId: string; email: string; password: string }) {
     return api.post<LoginResponse>('/auth/login', input);
   },
+  // Client-facing sign-in: email + password only; the tenant is resolved server-side.
+  clientLogin(input: { email: string; password: string }) {
+    return api.post<LoginResponse>('/auth/client-login', input);
+  },
   register(input: {
     tenantId: string;
     email: string;

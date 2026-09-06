@@ -94,6 +94,21 @@ export interface StagingSubmission {
   created_at: string;
 }
 
+export interface LearningArticle {
+  id: string;
+  category: 'CLAIM_GUIDE' | 'INVESTMENT' | 'TRAINING' | 'GUIDE' | string;
+  topic?: string | null;
+  slug: string;
+  title: string;
+  summary?: string | null;
+  body: string;
+  steps: string[];
+  read_minutes: number;
+  sort_order?: number;
+  published?: boolean;
+  updated_at?: string;
+}
+
 export interface KoisaChatResponse {
   mode: 'public' | 'authenticated';
   warning?: string | null;

@@ -13,7 +13,7 @@ export function PublicHeader() {
           <a href="#estimator" className="hover:text-maroon">Estimator</a>
           <a href="#security" className="hover:text-maroon">Security</a>
           <div className="ml-2 flex items-center gap-3">
-            <Link to="/login">
+            <Link to="/client-login">
               <Button variant="ghost" size="sm">Sign in</Button>
             </Link>
             <Link to="/onboarding" className="hidden sm:block">
@@ -23,7 +23,7 @@ export function PublicHeader() {
         </nav>
         {/* Mobile-only auth buttons */}
         <div className="flex items-center gap-3 md:hidden">
-          <Link to="/login">
+          <Link to="/client-login">
             <Button variant="ghost" size="sm">Sign in</Button>
           </Link>
           <Link to="/onboarding">

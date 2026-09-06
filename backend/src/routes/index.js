@@ -20,6 +20,7 @@ router.use('/financial', authenticate, require('./financial.routes'));
 router.use('/policies', authenticate, require('./policy.routes'));
 router.use('/claims', authenticate, require('./claim.routes'));
 router.use('/documents', authenticate, require('./document.routes'));
+router.use('/learning', authenticate, require('./learning.routes'));
 router.use('/compliance', authenticate, require('./compliance.routes'));
 router.use('/medical', authenticate, require('./medical.routes'));
 router.use('/workflow', authenticate, require('./workflow.routes'));

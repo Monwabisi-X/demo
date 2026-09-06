@@ -11,6 +11,10 @@ const { AppError } = require('../../utils/errors');
 
 const BCRYPT_ROUNDS = 12;
 
+// A fixed valid bcrypt hash used only to equalise timing when no user/hash is present,
+// so tenant-less login can't be used to enumerate registered emails. Matches nothing.
+const DUMMY_HASH = '$2a$12$C6UzMDM.H6dfI/f/IKcEeO3vg0Yq1n9Qm1qk8oQF5.4bqjJ8b6jFa';
+
 // Lazy model access so this module can be required without a live DB (load checks).
 function models() {
   return require('../../models');
@@ -62,6 +66,48 @@ async function login({ tenantId, email, password, meta = {} }) {
   const ok = user && user.password_hash && (await bcrypt.compare(password, user.password_hash));
   if (!ok) throw new AppError('INVALID_CREDENTIALS', 'Invalid email or password', 401);
 
+  return issueSession(user, meta);
+}
+
+/**
+ * Tenant-less login: resolve the tenant on the server from the email + password alone.
+ *
+ * The client-facing sign-in only collects email + password (no tenant UUID). Because
+ * `email` is unique only per-tenant, we load all active users with that email and match on
+ * the password. In practice a client's email is unique across tenants; if it somehow matches
+ * in more than one tenant we refuse rather than guess (the caller must use tenant-scoped
+ * login). Timing is kept roughly constant to avoid user enumeration.
+ */
+async function loginByEmail({ email, password, meta = {} }) {
+  const { User } = models();
+  const users = await User.scope('withSecret').findAll({
+    where: { email, status: 'active' },
+  });
+
+  const matches = [];
+  for (const u of users) {
+    // Always run a compare (even against a dummy) to keep timing uniform.
+    const hash = u.password_hash || DUMMY_HASH;
+    if ((await bcrypt.compare(password, hash)) && u.password_hash) matches.push(u);
+  }
+  if (users.length === 0) {
+    // Burn a compare so a missing email costs the same as a wrong password.
+    await bcrypt.compare(password, DUMMY_HASH);
+  }
+
+  if (matches.length === 0) {
+    throw new AppError('INVALID_CREDENTIALS', 'Invalid email or password', 401);
+  }
+  if (matches.length > 1) {
+    // Ambiguous across tenants — do not guess which account is intended.
+    throw new AppError('AMBIGUOUS_ACCOUNT', 'This email is registered with more than one organisation. Please contact your adviser.', 409);
+  }
+
+  return issueSession(matches[0], meta);
+}
+
+/** Shared session issuance for both tenant-scoped and tenant-less login. */
+async function issueSession(user, meta = {}) {
   const roleCodes = await roleCodesForUser(user);
   const principal = principalFromUser(user, roleCodes);
   const accessToken = jwtService.signAccessToken(principal);
@@ -203,6 +249,7 @@ function sanitize(user) {
 module.exports = {
   register,
   login,
+  loginByEmail,
   refresh,
   logout,
   changePassword,

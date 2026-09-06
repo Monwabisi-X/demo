@@ -34,6 +34,7 @@ const models = {
   AdviserStagingQueue: require('./adviser-staging-queue.model')(sequelize),
   RiskSubmission: require('./risk-submission.model')(sequelize),
   LegacyImportStaging: require('./legacy-import-staging.model')(sequelize),
+  LearningArticle: require('./learning-article.model')(sequelize),
 };
 
 // ── Associations ─────────────────────────────────────────────────────────────
@@ -41,10 +42,14 @@ const {
   Tenant, User, Role, Client, Household, Asset, Liability, Income, Expense,
   Provider, Product, Policy, Claim, Document, DocumentType, Consent,
   Notification, Task, MedicalQuestionnaire, AdviserStagingQueue, RiskSubmission,
+  LearningArticle,
 } = models;
 
 Tenant.hasMany(User, { foreignKey: 'tenant_id' });
 User.belongsTo(Tenant, { foreignKey: 'tenant_id' });
+
+Tenant.hasMany(LearningArticle, { foreignKey: 'tenant_id' });
+LearningArticle.belongsTo(Tenant, { foreignKey: 'tenant_id' });
 
 User.belongsToMany(Role, { through: 'user_roles', foreignKey: 'user_id', otherKey: 'role_id' });
 Role.belongsToMany(User, { through: 'user_roles', foreignKey: 'role_id', otherKey: 'user_id' });
