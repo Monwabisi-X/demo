@@ -95,5 +95,6 @@ module "automation" {
   name_prefix           = var.name_prefix
   environment           = var.environment
   enable_scheduler      = var.enable_scheduler
+  reminder_target_arn   = var.reminder_target_arn
   enable_step_functions = var.enable_step_functions
 }

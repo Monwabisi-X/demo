@@ -38,6 +38,16 @@ output "kms_app_key_arn" {
   value       = module.security.kms_app_key_arn
 }
 
+output "reminder_schedule_name" {
+  description = "EventBridge Scheduler reminder schedule name (null when disabled)."
+  value       = module.automation.reminder_schedule_name
+}
+
+output "claims_state_machine_arn" {
+  description = "Claims lifecycle state machine ARN (null when disabled)."
+  value       = module.automation.claims_state_machine_arn
+}
+
 output "secret_arns" {
   description = "Map of Secrets Manager secret name -> ARN (values injected out-of-band)."
   value       = module.secrets.secret_arns

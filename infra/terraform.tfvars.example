@@ -18,7 +18,8 @@ enable_rds            = false # turn on to create the PostgreSQL instance
 enable_ec2_alb        = false # turn on to create the EC2 host + ALB
 enable_api_lambda     = true  # API Gateway + Smile ID Lambda (pay-per-use)
 enable_redis          = false # ElastiCache (billable); see README for cheap alternative
-enable_scheduler      = true  # EventBridge reminder tick (created disabled until wired)
+enable_scheduler      = false # requires a dedicated reminder Lambda ARN; see below
+# reminder_target_arn = "arn:aws:lambda:af-south-1:123456789012:function:rsf-dev-reminder-tick"
 enable_step_functions = false # claims lifecycle orchestration
 
 # ── Sizing (Graviton/arm64, smallest sensible) ───────────────────────────────────
