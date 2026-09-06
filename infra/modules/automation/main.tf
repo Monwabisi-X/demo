@@ -1,5 +1,5 @@
 # Automation for the "straight-through" features:
-#   - EventBridge Scheduler: ticks the reminder engine (POST /reminders/run) on a cadence.
+#   - EventBridge Scheduler: ticks the reminder engine through a dedicated Lambda adapter.
 #   - Step Functions: orchestrates the multi-week motor-claim lifecycle.
 # Both are cheap/pay-per-use but toggled so a plan stays minimal.
 
@@ -21,23 +21,48 @@ resource "aws_iam_role" "scheduler" {
   assume_role_policy = data.aws_iam_policy_document.scheduler_assume[0].json
 }
 
-# Daily reminder tick. If a target ARN (Lambda) is provided, invoke it; otherwise the schedule
-# is created disabled so it does nothing until wired.
+# Daily reminder tick. It is created only when a dedicated reminder Lambda target is
+# explicitly supplied. The execution role is credentials for Scheduler, never the target.
+data "aws_iam_policy_document" "scheduler_invoke" {
+  count = var.enable_scheduler && var.reminder_target_arn != "" ? 1 : 0
+
+  statement {
+    actions   = ["lambda:InvokeFunction"]
+    resources = [var.reminder_target_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "scheduler_invoke" {
+  count  = var.enable_scheduler && var.reminder_target_arn != "" ? 1 : 0
+  name   = "${var.name_prefix}-${var.environment}-invoke-reminder"
+  role   = aws_iam_role.scheduler[0].id
+  policy = data.aws_iam_policy_document.scheduler_invoke[0].json
+}
+
 resource "aws_scheduler_schedule" "reminders" {
   count                        = var.enable_scheduler ? 1 : 0
   name                         = "${var.name_prefix}-${var.environment}-reminders-tick"
   schedule_expression          = "rate(1 day)"
   schedule_expression_timezone = "Africa/Johannesburg"
-  state                        = var.reminder_target_arn == "" ? "DISABLED" : "ENABLED"
+  state                        = "ENABLED"
 
   flexible_time_window {
     mode = "OFF"
   }
 
   target {
-    arn      = var.reminder_target_arn == "" ? aws_iam_role.scheduler[0].arn : var.reminder_target_arn
+    arn      = var.reminder_target_arn
     role_arn = aws_iam_role.scheduler[0].arn
   }
+
+  lifecycle {
+    precondition {
+      condition     = var.reminder_target_arn != ""
+      error_message = "enable_scheduler=true requires reminder_target_arn to be a dedicated reminder Lambda function ARN."
+    }
+  }
+
+  depends_on = [aws_iam_role_policy.scheduler_invoke]
 }
 
 # ── Step Functions: motor-claim lifecycle orchestration ───────────────────────────

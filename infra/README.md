@@ -18,7 +18,7 @@ Region defaults to **`af-south-1` (Cape Town)** for POPIA §72 data residency.
 | `redis` | ElastiCache Redis (single node) | **off** |
 | `compute` | EC2 (private, IMDSv2, SSM) in a 1-node ASG + Application Load Balancer | **off** |
 | `api` | API Gateway (HTTP API) + Lambda for **Smile ID** identity verification | on (pay-per-use) |
-| `automation` | EventBridge Scheduler (reminder tick) + Step Functions (claims lifecycle) | scheduler on (disabled until wired), SFN **off** |
+| `automation` | EventBridge Scheduler (reminder tick) + Step Functions (claims lifecycle) | both **off**; Scheduler requires a dedicated reminder Lambda ARN |
 
 ## Usage (plan-only)
 
@@ -41,8 +41,8 @@ posture**:
 
 - **No NAT Gateway** by default (a recurring hourly + data-processing cost). Private subnets
   reach AWS services through a **VPC endpoint** instead (`enable_vpc_endpoints = true`).
-- **RDS, EC2+ALB, ElastiCache, Step Functions are all OFF by default** — turn them on
-  per-environment when you accept the cost.
+- **RDS, EC2+ALB, ElastiCache, Scheduler, Step Functions are all OFF by default** — turn them on
+  per-environment when you accept the cost and their required targets are deployed.
 - Smallest **Graviton/arm64 `t4g`** sizes; single-AZ RDS; single-node ASG; CloudFront
   `PriceClass_100`.
 - Lambda + HTTP API + EventBridge are pay-per-use (≈ $0 at rest).
@@ -84,9 +84,25 @@ result. Without a key configured it returns a **simulated** result so the pipeli
 end-to-end before any vendor spend. The backend's `compliance/smileid.service.js` mirrors this
 contract.
 
+## Reminder Scheduler
+
+The Scheduler is deliberately off until a dedicated reminder Lambda exists. A disabled
+schedule still requires a valid AWS target, so Terraform never substitutes an IAM role ARN
+as a placeholder target. To enable it, set both values:
+
+```hcl
+enable_scheduler    = true
+reminder_target_arn = "arn:aws:lambda:af-south-1:123456789012:function:rsf-dev-reminder-tick"
+```
+
+Terraform validates that the target is a Lambda function ARN and grants the Scheduler role
+only `lambda:InvokeFunction` on that function. The Smile ID Lambda and claims state machine
+are not reminder targets. Until a dedicated Lambda calls the reminder service, leave the
+Scheduler disabled.
+
 ## Notes / follow-ups
 
 - Add an HTTPS (443) ALB listener + ACM certificate and a Route 53 record before production.
-- Wire the EventBridge reminder schedule's `reminder_target_arn` to a Lambda that calls the
-  backend `POST /reminders/run` (or run the reminder tick from the worker).
+- Add a dedicated reminder Lambda adapter that invokes `runDueReminders`; only then enable the
+  Scheduler with its function ARN.
 - Replace the Step Functions `Pass` states with real `Task` integrations per provider adapter.
