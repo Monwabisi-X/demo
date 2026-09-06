@@ -18,5 +18,16 @@ async function update(req, res) {
 async function status(req, res) {
   return ok(res, await claim.status(req.params.claimId));
 }
+async function lifecycle(req, res) {
+  return ok(res, await claim.lifecycle(req.params.claimId));
+}
+async function advanceStep(req, res) {
+  return ok(res, await claim.advanceStep({
+    claimId: req.params.claimId,
+    stepKey: req.body.stepKey,
+    status: req.body.status,
+    detail: req.body.detail,
+  }));
+}
 
-module.exports = { list, submit, update, status };
+module.exports = { list, submit, update, status, lifecycle, advanceStep };

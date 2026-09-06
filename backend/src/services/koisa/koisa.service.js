@@ -24,9 +24,11 @@ const financial = require('../financial/financial.service');
 const { withContext } = require('../../config/database');
 const { AppError } = require('../../utils/errors');
 
+// Must stay in sync with the frontend DASHBOARD_TABS (see
+// frontend/src/components/dashboard/DashboardShell.tsx). Only tabs that actually render are
+// valid navigation targets; previously this set listed tabs that don't exist.
 const VALID_TABS = new Set([
-  'overview', 'profile', 'financial_position', 'policies', 'goals',
-  'claims', 'documents', 'service_requests', 'communications', 'settings',
+  'overview', 'financial_position', 'policies', 'claims', 'documents', 'goals', 'learning', 'profile',
 ]);
 
 // ── Tool implementations ───────────────────────────────────────────────────────

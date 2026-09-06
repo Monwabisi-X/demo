@@ -12,6 +12,15 @@ async function login(req, res) {
   return ok(res, result);
 }
 
+// Client-facing sign-in: email + password only; the tenant is resolved server-side.
+async function clientLogin(req, res) {
+  const result = await authService.loginByEmail({
+    ...req.body,
+    meta: { ip: req.context && req.context.ip, userAgent: req.context && req.context.userAgent },
+  });
+  return ok(res, result);
+}
+
 async function register(req, res) {
   const user = await authService.register(req.body);
   return ok(res, user, 201);
@@ -96,6 +105,7 @@ async function deleteUser(req, res) {
 
 module.exports = {
   login,
+  clientLogin,
   register,
   refresh,
   logout,

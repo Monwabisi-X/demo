@@ -1,0 +1,32 @@
+# Example variables. Copy to terraform.tfvars and adjust per environment.
+# NEVER put secrets here (DB password, JWT secret, Smile ID key). Those live in AWS Secrets
+# Manager and are injected out-of-band (GitHub Actions / manual). See infra/README.md.
+
+region      = "af-south-1"
+environment = "dev"
+name_prefix = "rsf"
+
+vpc_cidr = "10.20.0.0/16"
+az_count = 2
+
+# ── Cost toggles — everything defaults to the cheapest safe posture. ──────────────
+# Turn these on deliberately, per environment, once you accept the cost.
+enable_nat_gateway    = false # recurring hourly + data cost; keep off, use VPC endpoints
+enable_vpc_endpoints  = true  # cheap AWS-service egress without NAT
+enable_cloudfront     = true  # serves the private S3 bucket via OAC
+enable_rds            = false # turn on to create the PostgreSQL instance
+enable_ec2_alb        = false # turn on to create the EC2 host + ALB
+enable_api_lambda     = true  # API Gateway + Smile ID Lambda (pay-per-use)
+enable_redis          = false # ElastiCache (billable); see README for cheap alternative
+enable_scheduler      = true  # EventBridge reminder tick (created disabled until wired)
+enable_step_functions = false # claims lifecycle orchestration
+
+# ── Sizing (Graviton/arm64, smallest sensible) ───────────────────────────────────
+db_instance_class    = "db.t4g.micro"
+db_allocated_storage = 20
+db_multi_az          = false
+ec2_instance_type    = "t4g.micro"
+redis_node_type      = "cache.t4g.micro"
+
+db_name     = "royalsquare"
+db_username = "royalsquare"

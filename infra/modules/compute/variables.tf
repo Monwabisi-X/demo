@@ -1,0 +1,10 @@
+variable "name_prefix" { type = string }
+variable "environment" { type = string }
+variable "enable_ec2_alb" { type = bool }
+variable "vpc_id" { type = string }
+variable "public_subnet_ids" { type = list(string) }
+variable "private_subnet_ids" { type = list(string) }
+variable "alb_sg_id" { type = string }
+variable "app_sg_id" { type = string }
+variable "instance_profile_name" { type = string }
+variable "instance_type" { type = string }

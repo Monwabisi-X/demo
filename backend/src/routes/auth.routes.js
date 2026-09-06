@@ -20,6 +20,7 @@ const resetLimit = rateLimiter({ windowSeconds: 60, max: 3, keyPrefix: 'rl:reset
 
 // ── Public / unauthenticated ────────────────────────────────────────────────────
 router.post('/login', loginLimit, validate(v.auth.login), asyncHandler(ctrl.login));
+router.post('/client-login', loginLimit, validate(v.auth.clientLogin), asyncHandler(ctrl.clientLogin));
 router.post('/register', registerLimit, validate(v.auth.register), asyncHandler(ctrl.register));
 router.post('/refresh', validate(v.auth.refresh), asyncHandler(ctrl.refresh));
 router.post('/logout', validate(v.auth.logout), asyncHandler(ctrl.logout));

@@ -3,6 +3,7 @@
 const express = require('express');
 const ctrl = require('../controllers/document.controller');
 const { requirePermission } = require('../middleware/rbac');
+const { enforceClientScope } = require('../middleware/ownership');
 const { validate } = require('../middleware/validation');
 const { audit } = require('../middleware/audit');
 const v = require('../validators');
@@ -11,7 +12,9 @@ const { PERMISSIONS: P } = require('../services/auth/rbac.service');
 
 const router = express.Router();
 
-router.get('/:clientId', requirePermission(P.DOCUMENT_READ), asyncHandler(ctrl.list));
+// CLIENT holds DOCUMENT_READ; scope self-ownership on DOCUMENT_WRITE (staff-only) so a client
+// can only list their own documents by clientId.
+router.get('/:clientId', requirePermission(P.DOCUMENT_READ), enforceClientScope([P.DOCUMENT_WRITE]), asyncHandler(ctrl.list));
 router.post('/upload', requirePermission(P.DOCUMENT_WRITE), validate(v.document.create), audit('document.upload', 'document'), asyncHandler(ctrl.upload));
 
 // Consent forms & T&Cs: store the artefact and (optionally) record the acceptance.

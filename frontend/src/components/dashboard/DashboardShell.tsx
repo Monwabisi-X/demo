@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Logo, Badge, statusTone, Button } from '@/components/ui';
 import { initials } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { LayoutDashboard, TrendingUp, ShieldCheck, FileText, FolderOpen, User } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, ShieldCheck, FileText, FolderOpen, User, GraduationCap, Target } from 'lucide-react';
 
 export interface DashboardTab {
   id: string;
@@ -18,6 +18,8 @@ const TAB_ICONS: Record<string, React.ElementType> = {
   policies: ShieldCheck,
   claims: FileText,
   documents: FolderOpen,
+  goals: Target,
+  learning: GraduationCap,
   profile: User,
 };
 
@@ -27,6 +29,8 @@ export const DASHBOARD_TABS: DashboardTab[] = [
   { id: 'policies', label: 'Policies' },
   { id: 'claims', label: 'Claims' },
   { id: 'documents', label: 'Documents' },
+  { id: 'goals', label: 'Goals & Requests' },
+  { id: 'learning', label: 'Information & Learning' },
   { id: 'profile', label: 'Profile' },
 ];
 

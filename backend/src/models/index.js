@@ -34,6 +34,12 @@ const models = {
   AdviserStagingQueue: require('./adviser-staging-queue.model')(sequelize),
   RiskSubmission: require('./risk-submission.model')(sequelize),
   LegacyImportStaging: require('./legacy-import-staging.model')(sequelize),
+  LearningArticle: require('./learning-article.model')(sequelize),
+  Goal: require('./goal.model')(sequelize),
+  ReminderRule: require('./reminder-rule.model')(sequelize),
+  IntegrationSubmission: require('./integration-submission.model')(sequelize),
+  ServiceRequest: require('./service-request.model')(sequelize),
+  ClaimLifecycleStep: require('./claim-lifecycle-step.model')(sequelize),
 };
 
 // ── Associations ─────────────────────────────────────────────────────────────
@@ -41,10 +47,14 @@ const {
   Tenant, User, Role, Client, Household, Asset, Liability, Income, Expense,
   Provider, Product, Policy, Claim, Document, DocumentType, Consent,
   Notification, Task, MedicalQuestionnaire, AdviserStagingQueue, RiskSubmission,
+  LearningArticle, Goal, ReminderRule, IntegrationSubmission, ServiceRequest, ClaimLifecycleStep,
 } = models;
 
 Tenant.hasMany(User, { foreignKey: 'tenant_id' });
 User.belongsTo(Tenant, { foreignKey: 'tenant_id' });
+
+Tenant.hasMany(LearningArticle, { foreignKey: 'tenant_id' });
+LearningArticle.belongsTo(Tenant, { foreignKey: 'tenant_id' });
 
 User.belongsToMany(Role, { through: 'user_roles', foreignKey: 'user_id', otherKey: 'role_id' });
 Role.belongsToMany(User, { through: 'user_roles', foreignKey: 'role_id', otherKey: 'user_id' });
@@ -106,6 +116,30 @@ AdviserStagingQueue.belongsTo(Client, { foreignKey: 'client_id' });
 
 Client.hasMany(RiskSubmission, { foreignKey: 'client_id' });
 RiskSubmission.belongsTo(Client, { foreignKey: 'client_id' });
+
+// ── Phase 3 features ─────────────────────────────────────────────────────────
+Client.hasMany(Goal, { foreignKey: 'client_id' });
+Goal.belongsTo(Client, { foreignKey: 'client_id' });
+Household.hasMany(Goal, { foreignKey: 'household_id' });
+Goal.belongsTo(Household, { foreignKey: 'household_id' });
+
+Tenant.hasMany(ReminderRule, { foreignKey: 'tenant_id' });
+ReminderRule.belongsTo(Tenant, { foreignKey: 'tenant_id' });
+Client.hasMany(ReminderRule, { foreignKey: 'client_id' });
+ReminderRule.belongsTo(Client, { foreignKey: 'client_id' });
+
+Tenant.hasMany(IntegrationSubmission, { foreignKey: 'tenant_id' });
+IntegrationSubmission.belongsTo(Tenant, { foreignKey: 'tenant_id' });
+Client.hasMany(IntegrationSubmission, { foreignKey: 'client_id' });
+IntegrationSubmission.belongsTo(Client, { foreignKey: 'client_id' });
+
+Client.hasMany(ServiceRequest, { foreignKey: 'client_id' });
+ServiceRequest.belongsTo(Client, { foreignKey: 'client_id' });
+Provider.hasMany(ServiceRequest, { foreignKey: 'provider_id' });
+ServiceRequest.belongsTo(Provider, { foreignKey: 'provider_id' });
+
+Claim.hasMany(ClaimLifecycleStep, { foreignKey: 'claim_id' });
+ClaimLifecycleStep.belongsTo(Claim, { foreignKey: 'claim_id' });
 
 models.sequelize = sequelize;
 module.exports = models;

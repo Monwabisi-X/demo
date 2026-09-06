@@ -2,6 +2,7 @@ import { useSearchParams } from 'react-router-dom';
 import { AdminShell, ADMIN_SECTIONS } from '@/components/admin/AdminShell';
 import { StagingHub } from '@/components/admin/StagingHub';
 import { ClaimsBoard } from '@/components/admin/ClaimsBoard';
+import { IntegrationsBoard } from '@/components/admin/IntegrationsBoard';
 import { AuditLog } from '@/components/admin/AuditLog';
 
 const VALID = new Set(ADMIN_SECTIONS.map((s) => s.id));
@@ -21,6 +22,7 @@ export default function AdminPage() {
     <AdminShell active={active} onNavigate={navigate}>
       {active === 'staging' && <StagingHub />}
       {active === 'claims' && <ClaimsBoard />}
+      {active === 'integrations' && <IntegrationsBoard />}
       {active === 'audit' && <AuditLog />}
     </AdminShell>
   );

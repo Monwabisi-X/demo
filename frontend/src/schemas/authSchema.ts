@@ -8,5 +8,13 @@ export const loginSchema = z.object({
 
 export type LoginFormData = z.infer<typeof loginSchema>;
 
+/** Client-facing sign-in: email + password only (tenant resolved on the server). */
+export const clientLoginSchema = z.object({
+  email: z.string().email('Enter a valid email address'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+export type ClientLoginFormData = z.infer<typeof clientLoginSchema>;
+
 /** Default demo tenant seeded by the backend (006_seed.sql). */
 export const DEMO_TENANT_ID = '00000000-0000-0000-0000-0000000000aa';

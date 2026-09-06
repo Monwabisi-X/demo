@@ -119,3 +119,115 @@ test('RBAC: MEDICAL_READ is not implied by CLIENT_READ (adviser)', () => {
   assert.equal(rbac.can(['ADVISER'], 'CLIENT_READ'), true);
   assert.equal(rbac.can(['ADVISER'], 'MEDICAL_READ'), false);
 });
+
+
+// ── Phase 2: RBAC additions + self-ownership + Koisa tab validity ────────────────
+const ownership = require('../src/middleware/ownership');
+
+test('RBAC: CLIENT holds CONTENT_READ (learning) but staff-only CONTENT_WRITE is withheld', () => {
+  assert.equal(rbac.can(['CLIENT'], 'CONTENT_READ'), true);
+  assert.equal(rbac.can(['CLIENT'], 'CONTENT_WRITE'), false);
+  assert.equal(rbac.can(['ADVISER'], 'CONTENT_WRITE'), true);
+});
+
+function runMw(mw, req) {
+  return new Promise((resolve) => mw(req, {}, (err) => resolve(err)));
+}
+
+test('Ownership: self-scoped CLIENT can only access their own clientId (URL param)', async () => {
+  const mw = ownership.enforceClientScope(['CLIENT_READ', 'CLIENT_UPDATE']);
+  const principal = { roles: ['CLIENT'], clientId: 'client-1', tenantId: 't1' };
+
+  const ownOk = await runMw(mw, { principal, params: { clientId: 'client-1' }, body: {} });
+  assert.equal(ownOk, undefined, 'own client should pass');
+
+  const other = await runMw(mw, { principal, params: { clientId: 'client-2' }, body: {} });
+  assert.ok(other && other.status === 403, 'another client should be forbidden');
+});
+
+test('Ownership: staff (broad permission) may access any clientId', async () => {
+  const mw = ownership.enforceClientScope(['CLIENT_READ', 'CLIENT_UPDATE']);
+  const principal = { roles: ['ADVISER'], clientId: null, tenantId: 't1' };
+  const err = await runMw(mw, { principal, params: { clientId: 'anyone' }, body: {} });
+  assert.equal(err, undefined, 'adviser should not be self-scoped');
+});
+
+test('Ownership: financial scope treats CLIENT (read-only) as self-scoped', async () => {
+  // CLIENT holds FINANCIAL_READ but not FINANCIAL_WRITE, so scoping on WRITE keeps them self-scoped.
+  const mw = ownership.enforceClientScope(['FINANCIAL_WRITE']);
+  const principal = { roles: ['CLIENT'], clientId: 'client-1', tenantId: 't1' };
+  const other = await runMw(mw, { principal, params: { clientId: 'client-9' }, body: {} });
+  assert.ok(other && other.status === 403, 'client must not read another client financials');
+});
+
+test('Koisa: navigate_to_tab rejects tabs that do not exist and accepts real ones', async () => {
+  const principal = { userId: 'u1', clientId: 'c1', tenantId: 't1', roles: ['CLIENT'] };
+  const ok = await koisa.runTool({ principal, mode: 'authenticated', toolName: 'navigate_to_tab', input: { tab: 'learning' } });
+  assert.equal(ok.tab, 'learning');
+  await assert.rejects(
+    () => koisa.runTool({ principal, mode: 'authenticated', toolName: 'navigate_to_tab', input: { tab: 'service_requests' } }),
+    /Unknown tab/
+  );
+});
+
+
+// ── Phase 3: goals progress, claim lifecycle template, RBAC for new domains ──────
+const goalService = require('../src/services/goal/goal.service');
+const claimService = require('../src/services/claim/claim.service');
+
+test('Goals: progress % is computed and clamped to 100', () => {
+  assert.equal(goalService.withProgress({ target_amount: 1000, current_amount: 250 }).progress_pct, 25);
+  assert.equal(goalService.withProgress({ target_amount: 1000, current_amount: 4000 }).progress_pct, 100);
+  assert.equal(goalService.withProgress({ target_amount: 0, current_amount: 100 }).progress_pct, 0);
+});
+
+test('Claims: motor lifecycle template is ordered and complete', () => {
+  assert.equal(claimService.MOTOR_LIFECYCLE[0], 'CLAIM_NUMBER_ISSUED');
+  assert.equal(claimService.MOTOR_LIFECYCLE[claimService.MOTOR_LIFECYCLE.length - 1], 'CLIENT_REVIEW_CLOSED');
+  assert.equal(new Set(claimService.MOTOR_LIFECYCLE).size, claimService.MOTOR_LIFECYCLE.length);
+});
+
+test('RBAC: CLIENT can read goals + raise service requests; staff manage them', () => {
+  assert.equal(rbac.can(['CLIENT'], 'GOALS_READ'), true);
+  assert.equal(rbac.can(['CLIENT'], 'GOALS_WRITE'), false);
+  assert.equal(rbac.can(['CLIENT'], 'SERVICE_REQUEST_WRITE'), true);
+  assert.equal(rbac.can(['ADVISER'], 'GOALS_WRITE'), true);
+  assert.equal(rbac.can(['ADVISER'], 'INTEGRATION_READ'), true);
+  assert.equal(rbac.can(['CLIENT'], 'INTEGRATION_READ'), false);
+});
+
+test('Reminders: cadence rolls next_run_at forward', () => {
+  const reminder = require('../src/services/reminder/reminder.service');
+  const base = new Date('2026-01-01T00:00:00Z');
+  const next = reminder.nextRunFrom(base, '1 year');
+  assert.ok(next.getTime() > base.getTime());
+});
+
+
+// ── Integration adapters (real skeletons) ────────────────────────────────────────
+const adapters = require('../src/services/integration/adapters');
+
+test('Adapters: registry exposes santam (insurer) and sars (government)', () => {
+  const providers = adapters.registeredProviders();
+  assert.ok(providers.includes('santam'));
+  assert.ok(providers.includes('sars'));
+  assert.equal(adapters.getAdapter('santam').kind, 'insurer');
+  assert.equal(adapters.getAdapter('sars').kind, 'government');
+  assert.equal(adapters.getAdapter('nope'), null);
+});
+
+test('Adapters: supports() gates submission types per adapter', () => {
+  const santam = adapters.getAdapter('santam');
+  const sars = adapters.getAdapter('sars');
+  assert.equal(santam.supports('CLAIM'), true);
+  assert.equal(santam.supports('REQUEST_IRP5'), false);
+  assert.equal(sars.supports('REQUEST_IRP5'), true);
+  assert.equal(sars.supports('CLAIM'), false);
+});
+
+test('Adapters: send() fails cleanly when not configured (no secret)', async () => {
+  const santam = adapters.getAdapter('santam');
+  const res = await santam.send({ submissionType: 'CLAIM', payload: {}, idempotencyKey: 'k1' });
+  assert.equal(res.status, 'failed');
+  assert.match(res.error, /not configured/i);
+});
