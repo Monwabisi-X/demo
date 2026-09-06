@@ -6,7 +6,7 @@ import { Button } from '@/components/ui';
 import {
   HeartPulse, Accessibility, Stethoscope, Briefcase,
   PiggyBank, BarChart3, Leaf, Car,
-  ShieldCheck, MapPin, Lock, ClipboardList,
+  ShieldCheck, Lock, ClipboardList,
 } from 'lucide-react';
 
 const PRODUCTS = [
@@ -22,7 +22,6 @@ const PRODUCTS = [
 
 const SECURITY = [
   { title: 'POPIA by design', body: 'Purpose-bound processing, versioned consent, and data-subject controls built in.', Icon: ShieldCheck },
-  { title: 'In-region hosting', body: 'All client data is hosted in AWS Cape Town (af-south-1) — no cross-border transfer.', Icon: MapPin },
   { title: 'Encrypted everywhere', body: 'Sensitive fields use envelope encryption (AWS KMS); documents are private and versioned.', Icon: Lock },
   { title: 'Fully audited', body: 'Every change is written to an immutable audit trail; sensitive reads are logged.', Icon: ClipboardList },
 ];
@@ -64,7 +63,7 @@ export default function LandingPage() {
                 { label: 'Protection', blurb: 'Life, disability & critical illness cover.', Icon: HeartPulse },
                 { label: 'Investments', blurb: 'RA, unit trusts & tax-free savings.', Icon: BarChart3 },
                 { label: 'Compliance', blurb: 'POPIA-aligned, fully audited.', Icon: ShieldCheck },
-                { label: 'Security', blurb: 'Encrypted at rest, hosted in af-south-1.', Icon: Lock },
+                { label: 'Security', blurb: 'Encrypted at rest and in transit.', Icon: Lock },
               ].map(({ label, blurb, Icon }) => (
                 <div key={label} className="flex flex-col gap-2 rounded-xl border border-cream-300 bg-cream-100 p-4">
                   <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-maroon/10">
@@ -134,7 +133,11 @@ export default function LandingPage() {
               <Button size="lg">Get started securely</Button>
             </Link>
             <Link to="/client-login">
-              <Button size="lg" variant="outline" className="border-cream-50/30 text-cream-50 hover:bg-cream-50/10">
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-cream-50 bg-transparent text-maroon hover:bg-cream-50/10"
+              >
                 Client sign in
               </Button>
             </Link>

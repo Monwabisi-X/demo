@@ -23,8 +23,6 @@ export function PublicFooter() {
         <div>
           <p className="eyebrow mb-3">Compliance</p>
           <ul className="space-y-2 text-sm text-ink-soft">
-            <li>POPIA-aligned processing</li>
-            <li>Data hosted in af-south-1</li>
             <li>Encrypted at rest & in transit</li>
           </ul>
         </div>
