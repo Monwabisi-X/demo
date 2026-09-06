@@ -9,9 +9,10 @@ export function PublicHeader() {
           <Logo />
         </Link>
         <nav className="hidden items-center gap-6 text-sm text-ink-soft md:flex">
-          <a href="#products" className="hover:text-maroon">Products</a>
-          <a href="#estimator" className="hover:text-maroon">Estimator</a>
-          <a href="#security" className="hover:text-maroon">Security</a>
+          <a href="#about" className="transition hover:text-maroon">About</a>
+          <a href="#information" className="transition hover:text-maroon">Information</a>
+          <a href="#products" className="transition hover:text-maroon">Products</a>
+          <a href="#estimator" className="transition hover:text-maroon">Estimator</a>
           <div className="ml-2 flex items-center gap-3">
             <Link to="/client-login">
               <Button variant="ghost" size="sm">Sign in</Button>

@@ -63,6 +63,14 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
             <Input
+              label="Tenant ID"
+              type="text"
+              autoComplete="off"
+              placeholder={DEMO_TENANT_ID}
+              error={errors.tenantId?.message}
+              {...register('tenantId')}
+            />
+            <Input
               label="Email"
               type="email"
               autoComplete="email"
@@ -78,8 +86,10 @@ export default function LoginPage() {
               error={errors.password?.message}
               {...register('password')}
             />
-            {/* tenantId is pre-filled from DEMO_TENANT_ID — hidden from UI */}
-            <input type="hidden" {...register('tenantId')} />
+
+            <div className="rounded-md border border-maroon/15 bg-cream px-3 py-2 text-xs text-ink-faint">
+              Demo tenant: {DEMO_TENANT_ID}
+            </div>
 
             {formError && (
               <div className="rounded-lg border border-maroon/20 bg-maroon-tint px-3 py-2 text-sm text-maroon">
