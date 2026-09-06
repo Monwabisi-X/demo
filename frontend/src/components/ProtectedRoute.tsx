@@ -10,9 +10,11 @@ import { Loading } from '@/components/ui';
 export function ProtectedRoute({
   children,
   roles,
+  loginPath = '/login',
 }: {
   children: ReactNode;
   roles?: string[];
+  loginPath?: '/login' | '/client-login';
 }) {
   const { status, isAuthenticated, hasRole } = useAuth();
   const location = useLocation();
@@ -26,7 +28,8 @@ export function ProtectedRoute({
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+    const from = `${location.pathname}${location.search}${location.hash}`;
+    return <Navigate to={loginPath} replace state={{ from }} />;
   }
 
   if (roles && roles.length > 0 && !hasRole(...roles)) {

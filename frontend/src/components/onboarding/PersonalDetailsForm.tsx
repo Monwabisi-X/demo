@@ -6,9 +6,11 @@ import { Button, Input, Select, Card } from '@/components/ui';
 export function PersonalDetailsForm({
   defaultValues,
   onSubmit,
+  submitting = false,
 }: {
   defaultValues?: Partial<ClientFormData>;
-  onSubmit: (data: ClientFormData) => void;
+  onSubmit: (data: ClientFormData) => void | Promise<void>;
+  submitting?: boolean;
 }) {
   const {
     register,
@@ -98,7 +100,7 @@ export function PersonalDetailsForm({
       </Card>
 
       <div className="flex justify-end">
-        <Button type="submit" size="lg">Continue</Button>
+        <Button type="submit" size="lg" loading={submitting}>Continue</Button>
       </div>
     </form>
   );

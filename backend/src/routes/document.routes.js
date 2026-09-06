@@ -17,8 +17,24 @@ const router = express.Router();
 router.get('/:clientId', requirePermission(P.DOCUMENT_READ), enforceClientScope([P.DOCUMENT_WRITE]), asyncHandler(ctrl.list));
 router.post('/upload', requirePermission(P.DOCUMENT_WRITE), validate(v.document.create), audit('document.upload', 'document'), asyncHandler(ctrl.upload));
 
-// Consent forms & T&Cs: store the artefact and (optionally) record the acceptance.
-router.post('/consent', requirePermission(P.DOCUMENT_WRITE), validate(v.document.consent), audit('document.consent.store', 'document'), asyncHandler(ctrl.uploadConsent));
+// Self-service acceptance has a constrained body and server-owned evidence metadata.
+router.post(
+  '/consent/self',
+  requirePermission(P.DOCUMENT_WRITE_SELF),
+  enforceClientScope([P.DOCUMENT_WRITE]),
+  validate(v.document.selfConsent),
+  audit('document.consent.accept', 'document'),
+  asyncHandler(ctrl.acceptTerms)
+);
+
+// Generic consent artefacts remain a broad staff-only document operation.
+router.post(
+  '/consent',
+  requirePermission(P.DOCUMENT_WRITE),
+  validate(v.document.consent),
+  audit('document.consent.store', 'document'),
+  asyncHandler(ctrl.uploadConsent)
+);
 
 router.get('/:documentId/download', requirePermission(P.DOCUMENT_READ), asyncHandler(ctrl.download));
 router.delete('/:documentId', requirePermission(P.DOCUMENT_WRITE), audit('document.delete', 'document', { idParam: 'documentId' }), asyncHandler(ctrl.remove));

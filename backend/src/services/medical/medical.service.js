@@ -73,7 +73,7 @@ function toMeta(row) {
  */
 async function getForClient({ clientId, decrypt = false, actor }) {
   if (!config.features.medical) {
-    throw new AppError('FORBIDDEN', 'Medical module is disabled', 403);
+    throw new AppError('FEATURE_DISABLED', 'Medical module is disabled', 503);
   }
   const { MedicalQuestionnaire } = models();
   const row = await MedicalQuestionnaire.findOne({ where: { client_id: clientId } });
@@ -97,7 +97,7 @@ async function getForClient({ clientId, decrypt = false, actor }) {
 
 async function submit({ clientId, questionnaireVersion, answers, status = 'submitted' }) {
   if (!config.features.medical) {
-    throw new AppError('FORBIDDEN', 'Medical module is disabled', 403);
+    throw new AppError('FEATURE_DISABLED', 'Medical module is disabled', 503);
   }
   const { MedicalQuestionnaire } = models();
   const existing = await MedicalQuestionnaire.findOne({ where: { client_id: clientId } });
@@ -118,7 +118,7 @@ async function submit({ clientId, questionnaireVersion, answers, status = 'submi
 
 async function update({ questionnaireId, answers, status }) {
   if (!config.features.medical) {
-    throw new AppError('FORBIDDEN', 'Medical module is disabled', 403);
+    throw new AppError('FEATURE_DISABLED', 'Medical module is disabled', 503);
   }
   const { MedicalQuestionnaire } = models();
   const row = await MedicalQuestionnaire.findByPk(questionnaireId);

@@ -16,9 +16,9 @@ import { Button, Card, Logo } from '@/components/ui';
 const STEPS = ['Your details', 'Medical intake', 'Consent', 'Done'];
 
 export default function OnboardingPage() {
-  const { user, clientLogin, refreshUser } = useAuth();
+  const { user, clientLogin } = useAuth();
   const [step, setStep] = useState(0);
-  const [personal, setPersonal] = useState<ClientFormData | null>(null);
+  const [firstName, setFirstName] = useState('');
   const [consentGiven, setConsentGiven] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,9 +51,11 @@ export default function OnboardingPage() {
           mobile: data.mobile || undefined,
         },
       });
-      await clientLogin({ email: data.email, password: data.password });
-      await refreshUser();
-      setPersonal(data);
+      const signedInUser = await clientLogin({ email: data.email, password: data.password });
+      if (!signedInUser.client_id) {
+        throw new Error('Your account was created but is not linked to a client profile. Please contact support.');
+      }
+      setFirstName(data.firstName);
       setStep(1);
     } catch (err) {
       setError(toApiError(err).message);
@@ -66,14 +68,16 @@ export default function OnboardingPage() {
     setError(null);
     setSubmitting(true);
     try {
-      if (clientId) {
-        await medicalApi.submit({ clientId, questionnaireVersion: 'v1', answers });
+      if (!clientId) {
+        throw new Error('Your signed-in account is not linked to a client profile. Please sign in again.');
       }
+      await medicalApi.submit({ clientId, questionnaireVersion: 'v1', answers });
       setStep(2);
     } catch (err) {
-      // Medical module may be disabled in the demo backend — proceed but note it.
+      // Medical intake is optional only when the backend explicitly disables the module.
+      // Permission and ownership failures must stop onboarding rather than being hidden.
       const apiErr = toApiError(err);
-      if (apiErr.status === 403) {
+      if (apiErr.code === 'FEATURE_DISABLED') {
         setStep(2);
       } else {
         setError(apiErr.message);
@@ -87,19 +91,10 @@ export default function OnboardingPage() {
     setError(null);
     setSubmitting(true);
     try {
-      if (clientId) {
-        await documentsApi.storeConsent({
-          clientId,
-          typeCode: 'TERMS_AND_CONDITIONS',
-          title: 'RSF Terms & Conditions acceptance',
-          consent: {
-            purposeCode: 'TERMS_AND_CONDITIONS',
-            purposeDescription: 'Client accepted the platform terms and conditions during onboarding.',
-            version: 'v1',
-            granted: true,
-          },
-        });
+      if (!clientId) {
+        throw new Error('Your signed-in account is not linked to a client profile. Please sign in again.');
       }
+      await documentsApi.acceptTerms(clientId);
       setStep(3);
     } catch (err) {
       setError(toApiError(err).message);
@@ -135,16 +130,11 @@ export default function OnboardingPage() {
         )}
 
         {step === 0 && (
-          <PersonalDetailsForm defaultValues={personal ?? undefined} onSubmit={handlePersonal} />
+          <PersonalDetailsForm onSubmit={handlePersonal} submitting={submitting} />
         )}
 
         {step === 1 && (
-          <div className="space-y-4">
-            <MedicalForm onSubmit={handleMedical} submitting={submitting} submitLabel="Save & continue" />
-            <button onClick={() => setStep(0)} className="text-sm text-ink-faint hover:text-maroon">
-              ← Back to details
-            </button>
-          </div>
+          <MedicalForm onSubmit={handleMedical} submitting={submitting} submitLabel="Save & continue" />
         )}
 
         {step === 2 && (
@@ -172,10 +162,7 @@ export default function OnboardingPage() {
                 information as described.
               </span>
             </label>
-            <div className="mt-6 flex justify-between">
-              <button onClick={() => setStep(1)} className="text-sm text-ink-faint hover:text-maroon">
-                ← Back
-              </button>
+            <div className="mt-6 flex justify-end">
               <Button size="lg" disabled={!consentGiven} loading={submitting} onClick={handleConsent}>
                 Accept & finish
               </Button>
@@ -190,7 +177,7 @@ export default function OnboardingPage() {
             </div>
             <h2 className="font-serif text-2xl text-ink">You're all set</h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-ink-faint">
-              Thanks{personal?.firstName ? `, ${personal.firstName}` : ''}. Your profile has
+              Thanks{firstName ? `, ${firstName}` : ''}. Your profile has
               been submitted. An adviser will review your information and be in touch.
             </p>
             <div className="mt-6 flex justify-center gap-3">

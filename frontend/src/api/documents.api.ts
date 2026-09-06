@@ -15,7 +15,11 @@ export const documentsApi = {
   }) {
     return api.post<DocumentRecord>('/documents/upload', input);
   },
-  /** Store a signed consent form / T&Cs and (optionally) record the acceptance. */
+  /** Accept the server-owned current T&Cs during self-service onboarding. */
+  acceptTerms(clientId: string) {
+    return api.post('/documents/consent/self', { clientId, accepted: true });
+  },
+  /** Store a signed consent form / T&Cs (staff-only backend operation). */
   storeConsent(input: {
     clientId: string;
     typeCode: 'CONSENT_FORM' | 'TERMS_AND_CONDITIONS' | 'POPIA_DISCLOSURE' | 'MEDICAL_CONSENT';
@@ -27,6 +31,7 @@ export const documentsApi = {
       purposeDescription: string;
       version: string;
       granted?: boolean;
+      captureMethod?: 'web_click' | 'upload';
     };
   }) {
     return api.post('/documents/consent', input);

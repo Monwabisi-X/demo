@@ -242,6 +242,10 @@ const document = {
     contentBase64: Joi.string().optional(),
     mimeType: Joi.string().max(150).optional(),
   }),
+  selfConsent: Joi.object({
+    clientId: uuid.required(),
+    accepted: Joi.boolean().valid(true).required(),
+  }),
   consent: Joi.object({
     clientId: uuid.required(),
     typeCode: Joi.string()
