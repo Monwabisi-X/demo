@@ -77,7 +77,7 @@ test('Koisa: chat stops and warns on sensitive input', async () => {
   const res = await koisa.chat({ principal: null, message: 'here is my password: hunter2' });
   assert.ok(res.warning);
   assert.equal(res.mode, 'public');
-  assert.deepEqual(res.toolResults, []);
+  assert.deepEqual(res.actions, []);
 });
 
 test('Koisa: anonymous chat is public mode; authenticated principal is dashboard mode', () => {

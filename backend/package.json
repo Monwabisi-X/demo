@@ -4,7 +4,7 @@
   "description": "Royal Square Financial backend — multi-tenant financial services API (Express, Sequelize, Redis, AWS).",
   "main": "src/server.js",
   "engines": {
-    "node": ">=18.0.0"
+    "node": "20.x"
   },
   "scripts": {
     "start": "node src/server.js",
@@ -14,13 +14,21 @@
     "worker": "node src/workers/index.js",
     "lint": "eslint src",
     "test": "node --test test/*.test.js",
-    "check": "node scripts/check-load.js"
+    "check": "node scripts/check-load.js",
+    "build:reminder-lambda": "bash scripts/build-reminder-lambda.sh"
   },
   "dependencies": {
+    "@aws-crypto/sha256-js": "5.2.0",
+    "@aws-sdk/client-bedrock-runtime": "3.1127.0",
     "@aws-sdk/client-kms": "^3.600.0",
     "@aws-sdk/client-s3": "^3.600.0",
     "@aws-sdk/client-secrets-manager": "^3.600.0",
+    "@aws-sdk/credential-provider-node": "3.972.82",
     "@aws-sdk/s3-request-presigner": "^3.600.0",
+    "@aws-sdk/util-format-url": "3.972.46",
+    "@smithy/protocol-http": "5.6.2",
+    "@smithy/signature-v4": "5.7.3",
+    "aws-ssl-profiles": "1.1.2",
     "bcryptjs": "^2.4.3",
     "bull": "^4.16.0",
     "compression": "^1.7.4",

@@ -1,12 +1,6 @@
 # RDS PostgreSQL 16 in PRIVATE subnets, KMS-encrypted, NOT publicly accessible. The master
-# password is NOT stored in Terraform — it is read from a Secrets Manager secret that is
-# populated out-of-band (CI/GitHub Secrets or manually). We pull the current value via a data
-# source only at apply time; it never appears in the repo.
-
-data "aws_secretsmanager_secret_version" "db_password" {
-  count     = var.enable_rds ? 1 : 0
-  secret_id = var.password_secret_arn
-}
+# RDS manages the master password and stores it in Secrets Manager encrypted by the
+# application KMS key. Terraform receives only the secret ARN, never the password value.
 
 resource "aws_db_subnet_group" "this" {
   count      = var.enable_rds ? 1 : 0
@@ -31,7 +25,9 @@ resource "aws_db_instance" "this" {
 
   db_name  = var.db_name
   username = var.db_username
-  password = data.aws_secretsmanager_secret_version.db_password[0].secret_string
+
+  manage_master_user_password   = true
+  master_user_secret_kms_key_id = var.kms_key_arn
 
   multi_az               = var.multi_az
   publicly_accessible    = false

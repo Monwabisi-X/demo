@@ -18,6 +18,7 @@ RUN addgroup -g 1001 -S nodejs && adduser -u 1001 -S nodejs -G nodejs
 COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=builder /app/src ./src
+COPY --from=builder /app/scripts/render-aws-env.js ./scripts/render-aws-env.js
 
 USER nodejs
 EXPOSE 3000

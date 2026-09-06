@@ -35,6 +35,8 @@ async function run() {
   const files = fs
     .readdirSync(__dirname)
     .filter((f) => f.endsWith('.sql'))
+    // Never install the known local demo login in a production database.
+    .filter((f) => !(process.env.NODE_ENV === 'production' && f === '009_demo_client_seed.sql'))
     .sort();
 
   for (const file of files) {

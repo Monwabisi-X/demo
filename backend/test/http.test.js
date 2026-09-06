@@ -76,12 +76,12 @@ test('protected route without a token is rejected', async () => {
   assert.equal(res.body.error.code, 'INVALID_TOKEN');
 });
 
-test('Koisa public chat works anonymously and gates to public tools', async () => {
+test('Koisa public chat returns only the allow-listed browser contract', async () => {
   const res = await request('POST', '/api/v1/koisa/chat', { message: 'What products do you offer?' });
   assert.equal(res.status, 200);
   assert.equal(res.body.data.mode, 'public');
-  assert.ok(res.body.data.availableTools.includes('get_product_catalog'));
-  assert.ok(!res.body.data.availableTools.includes('get_policy_details'));
+  assert.deepEqual(Object.keys(res.body.data).sort(), ['actions', 'mode', 'reply', 'warning']);
+  assert.deepEqual(res.body.data.actions, []);
 });
 
 test('Koisa warns and refuses to process sensitive input', async () => {

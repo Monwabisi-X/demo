@@ -5,3 +5,10 @@ variable "az_count" { type = number }
 variable "enable_nat_gateway" { type = bool }
 variable "enable_vpc_endpoints" { type = bool }
 variable "region" { type = string }
+
+
+variable "interface_endpoint_services" {
+  description = "Interface endpoint service suffixes to create in private subnets (for example secretsmanager, kms, ecr.api)."
+  type        = set(string)
+  default     = []
+}

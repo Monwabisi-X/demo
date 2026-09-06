@@ -1,6 +1,12 @@
 variable "name_prefix" { type = string }
 variable "environment" { type = string }
 variable "enable_redis" { type = bool }
+variable "enable_redis_tls" { type = bool }
+variable "use_redis_tls" { type = bool }
 variable "private_subnet_ids" { type = list(string) }
 variable "redis_sg_id" { type = string }
 variable "node_type" { type = string }
+variable "kms_key_arn" { type = string }
+variable "tls_num_cache_clusters" { type = number }
+variable "tls_snapshot_retention_days" { type = number }
+variable "tls_initial_snapshot_name" { type = string }

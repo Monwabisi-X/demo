@@ -9,7 +9,3 @@ variable "allocated_storage" { type = number }
 variable "multi_az" { type = bool }
 variable "db_name" { type = string }
 variable "db_username" { type = string }
-variable "password_secret_arn" {
-  description = "Secrets Manager ARN holding the DB master password (value injected out-of-band)."
-  type        = string
-}

@@ -49,11 +49,20 @@ async function addLiability(clientId, data) {
   return models().Liability.create({ client_id: clientId, ...data });
 }
 
-async function netWorth(clientId) {
+async function netWorth(clientId, options = {}) {
   const { Asset, Liability } = models();
+  const queryOptions = { transaction: options.transaction };
   const [assets, liabilities] = await Promise.all([
-    Asset.findAll({ where: { client_id: clientId, status: 'active' } }),
-    Liability.findAll({ where: { client_id: clientId, status: 'active' } }),
+    Asset.findAll({
+      where: { client_id: clientId, status: 'active' },
+      attributes: ['current_value'],
+      ...queryOptions,
+    }),
+    Liability.findAll({
+      where: { client_id: clientId, status: 'active' },
+      attributes: ['current_balance'],
+      ...queryOptions,
+    }),
   ]);
   const totalAssets = assets.reduce((s, a) => s + Number(a.current_value || 0), 0);
   const totalLiabilities = liabilities.reduce((s, l) => s + Number(l.current_balance || 0), 0);
@@ -65,11 +74,20 @@ async function netWorth(clientId) {
   };
 }
 
-async function monthlyCashflow(clientId) {
+async function monthlyCashflow(clientId, options = {}) {
   const { Income, Expense } = models();
+  const queryOptions = { transaction: options.transaction };
   const [income, expenses] = await Promise.all([
-    Income.findAll({ where: { client_id: clientId } }),
-    Expense.findAll({ where: { client_id: clientId } }),
+    Income.findAll({
+      where: { client_id: clientId },
+      attributes: ['amount', 'frequency'],
+      ...queryOptions,
+    }),
+    Expense.findAll({
+      where: { client_id: clientId },
+      attributes: ['amount', 'frequency'],
+      ...queryOptions,
+    }),
   ]);
   const monthlyIncome = income.reduce((s, i) => s + toMonthly(i.amount, i.frequency), 0);
   const monthlyExpenses = expenses.reduce((s, e) => s + toMonthly(e.amount, e.frequency), 0);

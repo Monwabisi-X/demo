@@ -24,6 +24,23 @@ function int(value, fallback) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+const invalidBounds = [];
+
+function boundedInt(name, fallback, min, max) {
+  const raw = process.env[name];
+  if (raw === undefined || raw === null || raw === '') return fallback;
+  if (!/^\d+$/.test(raw)) {
+    invalidBounds.push(`${name} (must be an integer from ${min} to ${max})`);
+    return fallback;
+  }
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value < min || value > max) {
+    invalidBounds.push(`${name} (must be from ${min} to ${max})`);
+    return fallback;
+  }
+  return value;
+}
+
 const config = {
   env,
   isProd,
@@ -46,7 +63,12 @@ const config = {
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     port: int(process.env.REDIS_PORT, 6379),
+    tls: bool(process.env.REDIS_TLS, false),
+    authMode:
+      process.env.REDIS_AUTH_MODE || (process.env.REDIS_PASSWORD ? 'password' : 'none'),
+    username: process.env.REDIS_USERNAME || undefined,
     password: process.env.REDIS_PASSWORD || undefined,
+    iamResource: process.env.REDIS_IAM_RESOURCE || undefined,
   },
 
   auth: {
@@ -90,18 +112,64 @@ const config = {
   },
 
   koisa: {
-    enabled: bool(process.env.KOISA_ENABLED, true),
-    bedrockRegion: process.env.BEDROCK_REGION || process.env.AWS_REGION || 'af-south-1',
-    modelId: process.env.BEDROCK_MODEL_ID || 'anthropic.claude-sonnet-5-20250929-v1:0',
+    enabled: bool(process.env.KOISA_ENABLED, false),
+    bedrockRegion: process.env.BEDROCK_REGION || '',
+    modelId: process.env.BEDROCK_MODEL_ID || '',
+    maxRounds: boundedInt('KOISA_MAX_ROUNDS', 4, 1, 8),
+    maxTotalToolCalls: boundedInt('KOISA_MAX_TOTAL_TOOL_CALLS', 6, 1, 16),
+    maxPerToolCalls: boundedInt('KOISA_MAX_PER_TOOL_CALLS', 2, 1, 5),
+    overallTimeoutMs: boundedInt('KOISA_OVERALL_TIMEOUT_MS', 15000, 1000, 30000),
+    toolTimeoutMs: boundedInt('KOISA_TOOL_TIMEOUT_MS', 4000, 250, 10000),
+    maxTokens: boundedInt('KOISA_MAX_TOKENS', 512, 64, 2048),
+    maxToolResultBytes: boundedInt('KOISA_MAX_TOOL_RESULT_BYTES', 8192, 512, 32768),
+    maxReplyChars: 2000,
   },
 };
+
+function redisValidationErrors() {
+  const errors = [];
+  const { authMode, tls, username, password, iamResource } = config.redis;
+
+  if (!['none', 'password', 'iam'].includes(authMode)) {
+    errors.push('REDIS_AUTH_MODE (must be none, password, or iam)');
+    return errors;
+  }
+
+  if (!isProd) return errors;
+
+  if (authMode === 'password' && !password) {
+    errors.push('REDIS_PASSWORD (required when REDIS_AUTH_MODE=password)');
+  }
+
+  if (authMode === 'iam') {
+    if (!tls) errors.push('REDIS_TLS (must be true when REDIS_AUTH_MODE=iam)');
+    if (!username) errors.push('REDIS_USERNAME');
+    if (!iamResource) {
+      errors.push('REDIS_IAM_RESOURCE');
+    } else if (!/^[a-z][a-z0-9-]{0,39}$/.test(iamResource)) {
+      errors.push('REDIS_IAM_RESOURCE (must be the lowercase replication-group ID, not a DNS endpoint)');
+    }
+    if (!process.env.AWS_REGION) errors.push('AWS_REGION (must be explicit for Redis IAM signing)');
+    if (password) errors.push('REDIS_PASSWORD (must be unset when REDIS_AUTH_MODE=iam)');
+  }
+
+  return errors;
+}
+
+/** Validate only the Redis contract, for runtimes such as the reminder Lambda. */
+function validateRedis() {
+  const errors = redisValidationErrors();
+  if (errors.length) {
+    throw new Error(`Invalid Redis configuration: ${errors.join(', ')}.`);
+  }
+}
 
 /**
  * Validate required configuration. Throws in production if a required secret is missing.
  * In development/test we allow safe fallbacks so the app can boot for local work.
  */
 function validate() {
-  const missing = [];
+  const missing = [...invalidBounds, ...redisValidationErrors()];
 
   if (!config.db.password && isProd) missing.push('DB_PASSWORD');
   if (!config.auth.jwtSecret) missing.push('JWT_SECRET');
@@ -118,6 +186,17 @@ function validate() {
     }
   }
 
+  if (config.koisa.enabled) {
+    if (!config.koisa.bedrockRegion) missing.push('BEDROCK_REGION');
+    if (config.koisa.bedrockRegion && config.koisa.bedrockRegion !== config.aws.region) {
+      missing.push('BEDROCK_REGION (must equal AWS_REGION for POPIA data residency)');
+    }
+    if (isProd && !config.koisa.modelId) missing.push('BEDROCK_MODEL_ID');
+    if (config.koisa.toolTimeoutMs >= config.koisa.overallTimeoutMs) {
+      missing.push('KOISA_TOOL_TIMEOUT_MS (must be less than KOISA_OVERALL_TIMEOUT_MS)');
+    }
+  }
+
   if (missing.length) {
     throw new Error(
       `Missing required configuration: ${missing.join(', ')}. ` +
@@ -127,5 +206,6 @@ function validate() {
 }
 
 config.validate = validate;
+config.validateRedis = validateRedis;
 
 module.exports = config;

@@ -11,6 +11,7 @@ const config = require('./index');
 let _s3 = null;
 let _kms = null;
 let _secrets = null;
+let _bedrockRuntime = null;
 
 function credentials() {
   // If explicit keys are provided use them; otherwise fall back to the default provider
@@ -45,4 +46,13 @@ function getSecrets() {
   return _secrets;
 }
 
-module.exports = { getS3, getKMS, getSecrets };
+function getBedrockRuntime() {
+  if (_bedrockRuntime) return _bedrockRuntime;
+  const { BedrockRuntimeClient } = require('@aws-sdk/client-bedrock-runtime');
+  // Deliberately use the SDK default credential chain (instance/task role in production).
+  // Bedrock has its own explicit, in-region setting and never falls back across regions.
+  _bedrockRuntime = new BedrockRuntimeClient({ region: config.koisa.bedrockRegion });
+  return _bedrockRuntime;
+}
+
+module.exports = { getS3, getKMS, getSecrets, getBedrockRuntime };

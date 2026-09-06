@@ -1,5 +1,6 @@
-# Private, versioned, KMS-encrypted S3 bucket for client documents, served ONLY through
-# CloudFront using Origin Access Control (OAC). The bucket blocks all public access.
+# Private, versioned, KMS-encrypted S3 bucket for client documents. The backend
+# authorizes direct presigned S3 delivery; the legacy CloudFront path remains optional.
+# Public access is blocked in every mode.
 
 resource "random_id" "suffix" {
   byte_length = 4
@@ -7,7 +8,12 @@ resource "random_id" "suffix" {
 
 resource "aws_s3_bucket" "documents" {
   bucket = "${var.name_prefix}-${var.environment}-documents-${random_id.suffix.hex}"
-  tags   = { Name = "${var.name_prefix}-${var.environment}-documents" }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  tags = { Name = "${var.name_prefix}-${var.environment}-documents" }
 }
 
 resource "aws_s3_bucket_public_access_block" "documents" {

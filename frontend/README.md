@@ -49,8 +49,44 @@ npm run dev            # http://localhost:5173  (proxies /api → http://localho
 npm run build          # type-check + production build
 ```
 
-The dev server proxies `/api/*` to the backend (`VITE_API_PROXY`). Point `VITE_API_URL` at
-the deployed API base for production builds.
+The dev server proxies `/api/*` to the backend (`VITE_API_PROXY`). Production static delivery
+has no proxy behavior, so production builds **must** use an absolute HTTPS API base, for example
+`VITE_API_URL=https://api.example.com/api/v1`. The backend `CORS_ORIGIN`/Terraform
+`cors_origin` must independently allow the deployed frontend origin.
+
+## AWS static deployment
+
+Infrastructure is a two-stage migration. During **stage one**, keep the legacy document
+`enable_cloudfront = true` and separately set `enable_frontend_delivery = true`; do not retire or
+repurpose the document bucket/CDN. Only after a strict no-destroy plan and a separately authorized
+infrastructure deployment should frontend artifacts be uploaded. **Stage two** (later) may disable
+the legacy flag only after presigned document delivery and all runtime consumers have been proven
+independent of it. See `infra/README.md` for the plan checks and rollback gates.
+
+The standalone helper defaults to `DRY_RUN=true`, verifies the AWS account and that the
+selected distribution has an OAC origin for the selected bucket, requires an absolute production
+`VITE_API_URL`, then always produces a fresh build. Hashed
+`dist/assets/*` files are uploaded first with a one-year immutable cache header; mutable entry
+files such as `index.html` are uploaded separately with `no-cache,no-store,must-revalidate`.
+Old hashed assets are deliberately retained for rollback. A live deployment requires a second,
+bucket-specific confirmation and invalidates only `/` and `/index.html`:
+
+```bash
+export EXPECTED_AWS_ACCOUNT_ID=123456789012
+export FRONTEND_BUCKET="$(terraform -chdir=../infra output -raw frontend_bucket)"
+export CLOUDFRONT_DISTRIBUTION_ID="$(terraform -chdir=../infra output -raw frontend_cloudfront_distribution_id)"
+export VITE_API_URL="https://api.example.com/api/v1"
+
+npm run deploy:aws                         # safe preview; uploads nothing
+DRY_RUN=false \
+CONFIRM_FRONTEND_DEPLOY="$FRONTEND_BUCKET:$CLOUDFRONT_DISTRIBUTION_ID" \
+npm run deploy:aws                         # explicit live artifact release
+```
+
+The helper uses the caller's existing AWS credential chain; do not add credentials to this
+repository. Infrastructure and artifact release remain separate: Terraform never manages S3
+objects, and this script never creates or changes infrastructure. Prune retained hashed assets
+only in a separately reviewed retention process, never in the entry-point deployment.
 
 ## Backend endpoints used
 

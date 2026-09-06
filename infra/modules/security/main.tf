@@ -1,10 +1,131 @@
 # KMS keys, security groups, and IAM roles. KMS keys use a short deletion window and rotation.
 
+data "aws_caller_identity" "current" {}
+data "aws_partition" "current" {}
+
+locals {
+  account_root_arn     = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:root"
+  autoscaling_role_arn = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling"
+}
+
+# Explicit key policies retain account-root delegation so authorised IAM policies continue to
+# work, while granting AWS services only the operations they require. This avoids accidental
+# KMS lockout when service-specific statements are added.
+data "aws_iam_policy_document" "app_kms" {
+  statement {
+    sid       = "EnableAccountRootDelegation"
+    actions   = ["kms:*"]
+    resources = ["*"]
+    principals {
+      type        = "AWS"
+      identifiers = [local.account_root_arn]
+    }
+  }
+
+  statement {
+    sid = "AllowCloudWatchLogs"
+    actions = [
+      "kms:Decrypt*",
+      "kms:Describe*",
+      "kms:Encrypt*",
+      "kms:GenerateDataKey*",
+      "kms:ReEncrypt*"
+    ]
+    resources = ["*"]
+    principals {
+      type        = "Service"
+      identifiers = ["logs.${var.region}.amazonaws.com"]
+    }
+    condition {
+      test     = "ArnLike"
+      variable = "kms:EncryptionContext:aws:logs:arn"
+      values = [
+        "arn:${data.aws_partition.current.partition}:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/${var.name_prefix}/${var.environment}/*"
+      ]
+    }
+  }
+
+  statement {
+    sid = "AllowAutoScalingEncryptedVolumes"
+    actions = [
+      "kms:Decrypt",
+      "kms:DescribeKey",
+      "kms:Encrypt",
+      "kms:GenerateDataKey*",
+      "kms:ReEncrypt*"
+    ]
+    resources = ["*"]
+    principals {
+      type        = "AWS"
+      identifiers = [local.account_root_arn]
+    }
+    condition {
+      test     = "ArnLike"
+      variable = "aws:PrincipalArn"
+      values   = [local.autoscaling_role_arn]
+    }
+  }
+
+  statement {
+    sid       = "AllowAutoScalingGrant"
+    actions   = ["kms:CreateGrant"]
+    resources = ["*"]
+    principals {
+      type        = "AWS"
+      identifiers = [local.account_root_arn]
+    }
+    condition {
+      test     = "ArnLike"
+      variable = "aws:PrincipalArn"
+      values   = [local.autoscaling_role_arn]
+    }
+    condition {
+      test     = "Bool"
+      variable = "kms:GrantIsForAWSResource"
+      values   = ["true"]
+    }
+  }
+
+  dynamic "statement" {
+    for_each = var.enable_scheduler ? [1] : []
+    content {
+      sid = "AllowSchedulerForEncryptedDlq"
+      actions = [
+        "kms:Decrypt",
+        "kms:GenerateDataKey*"
+      ]
+      resources = ["*"]
+      principals {
+        type        = "Service"
+        identifiers = ["scheduler.amazonaws.com"]
+      }
+      condition {
+        test     = "StringEquals"
+        variable = "AWS:SourceAccount"
+        values   = [data.aws_caller_identity.current.account_id]
+      }
+    }
+  }
+}
+
+data "aws_iam_policy_document" "medical_kms" {
+  statement {
+    sid       = "EnableAccountRootDelegation"
+    actions   = ["kms:*"]
+    resources = ["*"]
+    principals {
+      type        = "AWS"
+      identifiers = [local.account_root_arn]
+    }
+  }
+}
+
 # ── KMS: application data (S3, RDS, general envelope encryption) ───────────────────
 resource "aws_kms_key" "app" {
   description             = "${var.name_prefix}-${var.environment} application data key"
   deletion_window_in_days = 7
   enable_key_rotation     = true
+  policy                  = data.aws_iam_policy_document.app_kms.json
 }
 
 resource "aws_kms_alias" "app" {
@@ -17,6 +138,7 @@ resource "aws_kms_key" "medical" {
   description             = "${var.name_prefix}-${var.environment} special personal information key"
   deletion_window_in_days = 7
   enable_key_rotation     = true
+  policy                  = data.aws_iam_policy_document.medical_kms.json
 }
 
 resource "aws_kms_alias" "medical" {

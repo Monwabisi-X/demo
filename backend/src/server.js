@@ -41,15 +41,18 @@ async function start() {
     logger.info(`Received ${signal}, shutting down gracefully`);
 
     server.close(async () => {
-      try {
-        await sequelize.close();
-        await redis.quit();
-      } catch (err) {
-        logger.error('Error during shutdown', { message: err.message });
-      } finally {
-        logger.info('Shutdown complete');
-        process.exit(0);
+      const { closeAll } = require('./workers/queue');
+      const results = await Promise.allSettled([
+        closeAll(), // Stops Bull first, then centrally closes every tracked Redis client/timer.
+        sequelize.close(),
+      ]);
+      for (const result of results) {
+        if (result.status === 'rejected') {
+          logger.error('Error during shutdown', { message: result.reason.message });
+        }
       }
+      logger.info('Shutdown complete');
+      process.exit(results.some((result) => result.status === 'rejected') ? 1 : 0);
     });
 
     // Force-exit if close hangs.

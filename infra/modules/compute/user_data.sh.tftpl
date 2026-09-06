@@ -1,0 +1,95 @@
+#!/bin/bash
+set -euo pipefail
+
+IMAGE_URI='${image_uri}'
+AWS_REGION='${region}'
+
+systemctl enable --now docker
+install -d -m 0750 -o root -g 1001 /etc/rsf
+install -d -m 0700 -o 1001 -g 1001 /run/rsf
+
+aws ecr get-login-password --region "$${AWS_REGION}" \
+  | docker login --username AWS --password-stdin '${ecr_registry_host}'
+docker pull "$${IMAGE_URI}"
+
+printf '%s' '${runtime_env_b64}' | base64 --decode >/etc/rsf/static.env
+printf '\n' >>/etc/rsf/static.env
+chown root:1001 /etc/rsf/static.env
+chmod 0640 /etc/rsf/static.env
+
+cat >/usr/local/bin/rsf-render-env <<'RSF_RENDER'
+#!/bin/bash
+set -euo pipefail
+install -d -m 0700 -o 1001 -g 1001 /run/rsf
+exec /usr/bin/docker run --rm --network host \
+  -e AWS_REGION='${region}' \
+  -e RDS_MASTER_SECRET_ARN='${rds_master_secret_arn}' \
+  -e JWT_SECRET_ARN='${jwt_secret_arn}' \
+  -e ENCRYPTION_KEY_SECRET_ARN='${encryption_key_secret_arn}' \
+  -e DB_NAME='${db_name}' \
+  -e STATIC_ENV_FILE=/config/static.env \
+  -e OUTPUT_FILE=/run/rsf/backend.env \
+  -v /etc/rsf:/config:ro \
+  -v /run/rsf:/run/rsf \
+  '${image_uri}' node scripts/render-aws-env.js
+RSF_RENDER
+chmod 0750 /usr/local/bin/rsf-render-env
+
+cat >/etc/systemd/system/rsf-migrate.service <<'RSF_MIGRATE'
+[Unit]
+Description=Royal Square database migrations
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStartPre=/usr/local/bin/rsf-render-env
+ExecStart=/usr/bin/docker run --rm --network host --env-file /run/rsf/backend.env '${image_uri}' npm run migrate:prod
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+RSF_MIGRATE
+
+cat >/etc/systemd/system/rsf-api.service <<'RSF_API'
+[Unit]
+Description=Royal Square API
+After=rsf-migrate.service
+Requires=rsf-migrate.service
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStopSec=25
+ExecStartPre=-/usr/bin/docker rm -f rsf-api
+ExecStartPre=/usr/local/bin/rsf-render-env
+ExecStart=/usr/bin/docker run --rm --name rsf-api --network host --env-file /run/rsf/backend.env --read-only --tmpfs /tmp:rw,noexec,nosuid,size=64m --cap-drop ALL --security-opt no-new-privileges --log-driver awslogs --log-opt awslogs-region='${region}' --log-opt awslogs-group='${api_log_group}' --log-opt awslogs-stream=api '${image_uri}' node src/server.js
+ExecStop=/usr/bin/docker stop --time 20 rsf-api
+
+[Install]
+WantedBy=multi-user.target
+RSF_API
+
+cat >/etc/systemd/system/rsf-worker.service <<'RSF_WORKER'
+[Unit]
+Description=Royal Square background worker
+After=rsf-migrate.service
+Requires=rsf-migrate.service
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStopSec=25
+ExecStartPre=-/usr/bin/docker rm -f rsf-worker
+ExecStartPre=/usr/local/bin/rsf-render-env
+ExecStart=/usr/bin/docker run --rm --name rsf-worker --network host --env-file /run/rsf/backend.env --read-only --tmpfs /tmp:rw,noexec,nosuid,size=64m --cap-drop ALL --security-opt no-new-privileges --log-driver awslogs --log-opt awslogs-region='${region}' --log-opt awslogs-group='${worker_log_group}' --log-opt awslogs-stream=worker '${image_uri}' node src/workers/index.js
+ExecStop=/usr/bin/docker stop --time 20 rsf-worker
+
+[Install]
+WantedBy=multi-user.target
+RSF_WORKER
+
+systemctl daemon-reload
+systemctl enable --now rsf-migrate.service
+systemctl enable --now rsf-api.service rsf-worker.service
