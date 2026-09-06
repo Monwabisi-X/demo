@@ -3,15 +3,49 @@
 Prototype foundations for the Royal Square Financial brokerage platform, built from the
 *PostgreSQL Data Architecture, Schema Design & Platform Blueprint*.
 
-This repository contains three independently useful parts. **None of them touch AWS or
-spend credits** until you explicitly choose to deploy.
+This repository contains the application, local runtime, and plan-only infrastructure. **None of
+it touches AWS or spends credits** until you explicitly choose to deploy.
 
 ```
 royal-square/
-├── agent/     # Koisa — dual-mode Bedrock conversational agent (JSON + Python)
-├── db/        # PostgreSQL 16 migrations + seeds (validated locally in Docker)
-└── infra/     # Terraform for AWS (plan-only; never applied here)
+├── frontend/           # React/Vite client portal and adviser UI
+├── backend/            # Node/Express API, migrations, and workers
+├── docker-compose.yml  # One-command local frontend + API + PostgreSQL + Redis
+├── agent/              # Koisa Bedrock agent contract
+├── db/                 # Reference PostgreSQL schema assets
+└── infra/              # Terraform for AWS (plan-only; never applied here)
 ```
+
+## Run the complete application locally with Docker
+
+You do not need to create images manually. From the repository root, Docker Compose builds
+the frontend and API images, starts PostgreSQL and Redis, applies backend migrations, and then
+starts the application:
+
+```bash
+docker compose up --build
+```
+
+Open **http://localhost:8080**. The API health endpoint is available at
+**http://localhost:3000/health**. The seeded client credentials are:
+
+- Email: `demo.client@royalsquare.co.za`
+- Password: `DemoClient123!`
+
+The stack uses separate containers rather than one monolithic image: `frontend`, `api`,
+`postgres`, and `redis`. They still start with one command, but remain independently
+health-checked and replaceable. Useful commands:
+
+```bash
+docker compose ps
+docker compose logs api
+docker compose down
+```
+
+Use `docker compose down -v` only when you intentionally want to delete the local PostgreSQL
+and Redis data and rebuild from an empty database. Local fallback credentials in the Compose
+file are development-only; set `DB_PASSWORD`, `JWT_SECRET`, and `ENCRYPTION_KEY` in your shell
+before startup when the environment is shared.
 
 ## 1. `agent/` — Koisa
 

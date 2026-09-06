@@ -28,7 +28,7 @@ interface AuthContextValue extends AuthState {
   isAdviser: boolean;
   hasRole: (...codes: string[]) => boolean;
   login: (input: { tenantId: string; email: string; password: string }) => Promise<void>;
-  clientLogin: (input: { email: string; password: string }) => Promise<void>;
+  clientLogin: (input: { email: string; password: string }) => Promise<AppUser>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -91,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await authApi.clientLogin(input);
     setTokens(res.accessToken, res.refreshToken);
     setState({ user: res.user, roles: res.roles || decodeRoles(res.accessToken), status: 'authenticated' });
+    return res.user;
   }, []);
 
   const logout = useCallback<AuthContextValue['logout']>(async () => {

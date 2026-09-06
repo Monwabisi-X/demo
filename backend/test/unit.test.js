@@ -273,3 +273,73 @@ test('errorHandler: unrecognised errors still fall back to a generic 500 (no lea
   assert.equal(res.statusCode, 500);
   assert.equal(res.body.error.code, 'INTERNAL_ERROR');
 });
+
+
+// ── Onboarding self-service permissions ────────────────────────────────────────
+test('RBAC: CLIENT can submit only their own medical intake and consent', () => {
+  assert.equal(rbac.can(['CLIENT'], 'MEDICAL_WRITE_SELF'), true);
+  assert.equal(rbac.can(['CLIENT'], 'DOCUMENT_WRITE_SELF'), true);
+  assert.equal(rbac.can(['CLIENT'], 'MEDICAL_WRITE'), false);
+  assert.equal(rbac.can(['CLIENT'], 'DOCUMENT_WRITE'), false);
+});
+
+test('Ownership: onboarding self-service writes are restricted by body clientId', async () => {
+  const principal = { roles: ['CLIENT'], clientId: 'client-1', tenantId: 'tenant-1' };
+
+  const medicalScope = ownership.enforceClientScope(['MEDICAL_WRITE']);
+  assert.equal(
+    await runMw(medicalScope, { principal, params: {}, body: { clientId: 'client-1' } }),
+    undefined
+  );
+  const otherMedical = await runMw(medicalScope, {
+    principal,
+    params: {},
+    body: { clientId: 'client-2' },
+  });
+  assert.equal(otherMedical && otherMedical.status, 403);
+
+  const consentScope = ownership.enforceClientScope(['DOCUMENT_WRITE']);
+  assert.equal(
+    await runMw(consentScope, { principal, params: {}, body: { clientId: 'client-1' } }),
+    undefined
+  );
+  const otherConsent = await runMw(consentScope, {
+    principal,
+    params: {},
+    body: { clientId: 'client-2' },
+  });
+  assert.equal(otherConsent && otherConsent.status, 403);
+});
+
+test('Ownership: an unlinked CLIENT cannot submit onboarding data', async () => {
+  const principal = { roles: ['CLIENT'], clientId: null, tenantId: 'tenant-1' };
+  const err = await runMw(
+    ownership.enforceClientScope(['DOCUMENT_WRITE']),
+    { principal, params: {}, body: { clientId: 'client-1' } }
+  );
+  assert.equal(err && err.status, 403);
+  assert.match(err.message, /not linked/i);
+});
+
+
+
+test('Consent: self-service contract requires affirmative acceptance and strips evidence metadata', () => {
+  const validators = require('../src/validators');
+  const clientId = '11111111-1111-1111-1111-111111111111';
+
+  const rejected = validators.document.selfConsent.validate({ clientId, accepted: false });
+  assert.ok(rejected.error, 'false acceptance must be rejected');
+
+  const { value, error } = validators.document.selfConsent.validate(
+    {
+      clientId,
+      accepted: true,
+      sourceIp: '203.0.113.99',
+      version: 'spoofed',
+      captureMethod: 'upload',
+    },
+    { stripUnknown: true }
+  );
+  assert.equal(error, undefined);
+  assert.deepEqual(value, { clientId, accepted: true });
+});

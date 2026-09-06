@@ -9,7 +9,8 @@
 
 const express = require('express');
 const ctrl = require('../controllers/medical.controller');
-const { requirePermission } = require('../middleware/rbac');
+const { requirePermission, requireAnyPermission } = require('../middleware/rbac');
+const { enforceClientScope } = require('../middleware/ownership');
 const { validate } = require('../middleware/validation');
 const { audit } = require('../middleware/audit');
 const v = require('../validators');
@@ -19,7 +20,14 @@ const { PERMISSIONS: P } = require('../services/auth/rbac.service');
 const router = express.Router();
 
 router.get('/:clientId', requirePermission(P.MEDICAL_READ), asyncHandler(ctrl.getForClient));
-router.post('/', requirePermission(P.MEDICAL_WRITE), validate(v.medical.submit), audit('medical.submit', 'medical_questionnaire'), asyncHandler(ctrl.submit));
+router.post(
+  '/',
+  requireAnyPermission([P.MEDICAL_WRITE, P.MEDICAL_WRITE_SELF]),
+  enforceClientScope([P.MEDICAL_WRITE]),
+  validate(v.medical.submit),
+  audit('medical.submit', 'medical_questionnaire'),
+  asyncHandler(ctrl.submit)
+);
 router.put('/:questionnaireId', requirePermission(P.MEDICAL_WRITE), validate(v.medical.update), audit('medical.update', 'medical_questionnaire', { idParam: 'questionnaireId' }), asyncHandler(ctrl.update));
 
 module.exports = router;
